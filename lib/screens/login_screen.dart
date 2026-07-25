@@ -73,25 +73,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Expanded(
-                                  child: ClipRect(
-                                      child: Transform.scale(
-                                          scale: 1.3,
-                                          child: Image.asset(cricketRabbitUrl,
-                                              fit: BoxFit.cover)))),
+                                  child: Image.asset(cricketRabbitUrl,
+                                      fit: BoxFit.contain)),
                               const SizedBox(width: 8),
                               Expanded(
-                                  child: ClipRect(
-                                      child: Transform.scale(
-                                          scale: 1.3,
-                                          child: Image.asset(footballRabbitUrl,
-                                              fit: BoxFit.cover)))),
+                                  child: Image.asset(footballRabbitUrl,
+                                      fit: BoxFit.contain)),
                               const SizedBox(width: 8),
                               Expanded(
-                                  child: ClipRect(
-                                      child: Transform.scale(
-                                          scale: 1.3,
-                                          child: Image.asset(tennisRabbitUrl,
-                                              fit: BoxFit.cover)))),
+                                  child: Image.asset(tennisRabbitUrl,
+                                      fit: BoxFit.contain)),
                             ],
                           ),
                         ),
