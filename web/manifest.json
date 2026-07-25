@@ -1,11 +1,11 @@
 {
-    "name": "book_rabbit_frontend",
-    "short_name": "book_rabbit_frontend",
+    "name": "Book Rabbit",
+    "short_name": "Book Rabbit",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Book Rabbit lets you instantly book your favourite sports grounds.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
