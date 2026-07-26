@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
+import '../widgets/touchable_opacity.dart';
 
 class SetupProfileScreen extends StatefulWidget {
   const SetupProfileScreen({super.key});
@@ -77,7 +79,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                                 Navigator.pop(context);
                               },
                             ),
-                          ),
+                          ).animate().fade().slideX(begin: -0.2),
                           const SizedBox(height: 20),
                           const Text(
                             'Create Account',
@@ -86,7 +88,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
-                          ),
+                          ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
                           const SizedBox(height: 16),
                           Text(
                             'Enter a few more details to finish creating your\nBook Rabbit account.',
@@ -95,7 +97,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                               fontSize: 16,
                               height: 1.4,
                             ),
-                          ),
+                          ).animate().fade(delay: 150.ms).slideY(begin: 0.1),
                           const SizedBox(height: 32),
                           Center(
                             child: GestureDetector(
@@ -133,10 +135,11 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                                 ],
                               ),
                             ),
-                          ),
+                          ).animate().fade(delay: 200.ms).scale(),
                           const SizedBox(height: 40),
-                          _buildTextFieldLabel('FIRST NAME *'),
-                          _buildTextField(hintText: 'Enter your first name', controller: _nameController),
+                          _buildTextFieldLabel('FIRST NAME *').animate().fade(delay: 250.ms),
+                          _buildTextField(hintText: 'Enter your first name', controller: _nameController)
+                              .animate().fade(delay: 300.ms).slideY(begin: 0.1),
                           const SizedBox(height: 24),
                           _buildCheckboxRow(
                             value: _acceptTerms,
@@ -157,55 +160,53 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                                 const TextSpan(text: '.'),
                               ],
                             ),
-                          ),
+                          ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                           const SizedBox(height: 40),
                         ],
                       ),
                     ),
                   ),
                   // Bottom Actions
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () async {
-                              if (_nameController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Please enter your first name."),
-                                    backgroundColor: Colors.redAccent,
-                                  ),
-                                );
-                                return;
+                  TouchableOpacity(
+                    onTap: _isSubmitting
+                        ? null
+                        : () async {
+                            if (_nameController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please enter your first name."),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                              return;
+                            }
+                            setState(() => _isSubmitting = true);
+                            try {
+                              await AuthService.updateName(_nameController.text.trim());
+                              if (!context.mounted) return;
+                              Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                            } on ApiException catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.message),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            } finally {
+                              if (context.mounted) {
+                                setState(() => _isSubmitting = false);
                               }
-                              setState(() => _isSubmitting = true);
-                              try {
-                                await AuthService.updateName(_nameController.text.trim());
-                                if (!context.mounted) return;
-                                Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-                              } on ApiException catch (e) {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(e.message),
-                                    backgroundColor: Colors.redAccent,
-                                  ),
-                                );
-                              } finally {
-                                if (context.mounted) {
-                                  setState(() => _isSubmitting = false);
-                                }
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                            }
+                          },
+                    child: Container(
+                      width: double.infinity,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      alignment: Alignment.center,
                       child: _isSubmitting
                           ? const SizedBox(
                               width: 22,
@@ -220,10 +221,11 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
                             ),
                     ),
-                  ),
+                  ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                   const SizedBox(height: 24),
                   // Footer
                   Row(
@@ -258,7 +260,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
-                  ),
+                  ).animate().fade(delay: 550.ms).slideY(begin: 0.1),
                   const SizedBox(height: 20),
                 ],
               ),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import 'otp_screen.dart';
+import '../widgets/touchable_opacity.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,7 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const SizedBox(height: 40),
                         const Icon(Icons.cruelty_free,
-                            color: Colors.white, size: 42),
+                            color: Colors.white, size: 42)
+                            .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
                         const SizedBox(height: 12),
                         Text(
                           "Book Rabbit",
@@ -69,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
-                        ),
+                        ).animate().fade(delay: 100.ms).slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
                         const SizedBox(height: 28),
                         Expanded(
                           child: Row(
@@ -77,15 +80,18 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Expanded(
                                   child: Image.asset(cricketRabbitUrl,
-                                      fit: BoxFit.contain)),
+                                      fit: BoxFit.contain)
+                                      .animate().fade(delay: 200.ms).slideY(begin: 0.2)),
                               const SizedBox(width: 8),
                               Expanded(
                                   child: Image.asset(footballRabbitUrl,
-                                      fit: BoxFit.contain)),
+                                      fit: BoxFit.contain)
+                                      .animate().fade(delay: 250.ms).slideY(begin: 0.2)),
                               const SizedBox(width: 8),
                               Expanded(
                                   child: Image.asset(tennisRabbitUrl,
-                                      fit: BoxFit.contain)),
+                                      fit: BoxFit.contain)
+                                      .animate().fade(delay: 300.ms).slideY(begin: 0.2)),
                             ],
                           ),
                         ),
@@ -97,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
+                        ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                         const SizedBox(height: 10),
                         Text(
                           "Book Rabbit lets you instantly book your favourite sports grounds.",
@@ -107,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white.withValues(alpha: .95),
                             height: 1.5,
                           ),
-                        ),
+                        ).animate().fade(delay: 450.ms).slideY(begin: 0.1),
                         const SizedBox(height: 30),
                         TextField(
                           controller: phoneController,
@@ -139,66 +145,63 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                        ),
+                        ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                         const SizedBox(height: 18),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 0,
-                            ),
-                            onPressed: _isSubmitting
-                                ? null
-                                : () async {
-                                    if (phoneController.text.length != 10) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Please enter a valid 10-digit mobile number."),
-                                          backgroundColor: Colors.redAccent,
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    final phone = phoneController.text;
-                                    setState(() => _isSubmitting = true);
-                                    try {
-                                      final devOtp = await AuthService.sendOtp(phone);
-                                      if (!context.mounted) return;
-                                      if (devOtp != null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('DEV OTP: $devOtp'),
-                                            backgroundColor: Colors.black87,
-                                            duration: const Duration(seconds: 6),
-                                          ),
-                                        );
-                                      }
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => OtpScreen(phone: phone),
-                                        ),
-                                      );
-                                    } on ApiException catch (e) {
-                                      if (!context.mounted) return;
+                        TouchableOpacity(
+                          onTap: _isSubmitting
+                              ? null
+                              : () async {
+                                  if (phoneController.text.length != 10) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Please enter a valid 10-digit mobile number."),
+                                        backgroundColor: Colors.redAccent,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  final phone = phoneController.text;
+                                  setState(() => _isSubmitting = true);
+                                  try {
+                                    final devOtp = await AuthService.sendOtp(phone);
+                                    if (!context.mounted) return;
+                                    if (devOtp != null) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text(e.message),
-                                          backgroundColor: Colors.redAccent,
+                                          content: Text('DEV OTP: $devOtp'),
+                                          backgroundColor: Colors.black87,
+                                          duration: const Duration(seconds: 6),
                                         ),
                                       );
-                                    } finally {
-                                      if (context.mounted) {
-                                        setState(() => _isSubmitting = false);
-                                      }
                                     }
-                                  },
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => OtpScreen(phone: phone),
+                                      ),
+                                    );
+                                  } on ApiException catch (e) {
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.message),
+                                        backgroundColor: Colors.redAccent,
+                                      ),
+                                    );
+                                  } finally {
+                                    if (context.mounted) {
+                                      setState(() => _isSubmitting = false);
+                                    }
+                                  }
+                                },
+                          child: Container(
+                            width: double.infinity,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
                             child: _isSubmitting
                                 ? const SizedBox(
                                     width: 22,
@@ -211,12 +214,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : Text(
                                     "LOGIN",
                                     style: GoogleFonts.inter(
+                                      color: Colors.black,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 1.5,
                                     ),
                                   ),
                           ),
-                        ),
+                        ).animate().fade(delay: 550.ms).slideY(begin: 0.1),
                         const SizedBox(height: 12),
                         Align(
                           alignment: Alignment.centerRight,

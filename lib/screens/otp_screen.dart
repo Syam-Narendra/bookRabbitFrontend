@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 
@@ -64,7 +66,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         Navigator.pop(context);
                       },
                     ),
-                  ),
+                  ).animate().fade().slideX(begin: -0.2),
                   const SizedBox(height: 24),
                   Text(
                     'Enter the code we sent to your mobile number\n+91 ${widget.phone}',
@@ -73,7 +75,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       fontSize: 18,
                       height: 1.4,
                     ),
-                  ),
+                  ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
                   const SizedBox(height: 32),
                   Text(
                     'VERIFICATION CODE',
@@ -83,7 +85,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.0,
                     ),
-                  ),
+                  ).animate().fade(delay: 150.ms).slideY(begin: 0.1),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -94,7 +96,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       const Text(
                         '-',
                         style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
+                      ).animate().fade(delay: 200.ms),
                       _buildCodeBox(3),
                       _buildCodeBox(4),
                       _buildCodeBox(5),
@@ -111,7 +113,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                  ).animate().fade(delay: 400.ms),
                   const Spacer(),
                   // Footer
                   Row(
@@ -146,7 +148,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
-                  ),
+                  ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -186,7 +188,7 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Widget _buildCodeBox(int index) {
-    return Container(
+    Widget box = Container(
       width: 48,
       height: 56,
       decoration: BoxDecoration(
@@ -220,5 +222,15 @@ class _OtpScreenState extends State<OtpScreen> {
         ),
       ),
     );
+
+    if (_isVerifying) {
+      box = Shimmer.fromColors(
+        baseColor: const Color(0xFF333333),
+        highlightColor: const Color(0xFF4A4A4A),
+        child: box,
+      );
+    }
+
+    return box.animate().fade(delay: Duration(milliseconds: 200 + (index * 50))).slideY(begin: 0.1);
   }
 }

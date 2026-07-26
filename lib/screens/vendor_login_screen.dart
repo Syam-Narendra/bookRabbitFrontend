@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'otp_screen.dart';
+import '../widgets/touchable_opacity.dart';
 
 class VendorLoginScreen extends StatefulWidget {
   const VendorLoginScreen({super.key});
@@ -57,7 +59,8 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                       children: [
                         const SizedBox(height: 40),
                         const Icon(Icons.cruelty_free,
-                            color: Colors.white, size: 42),
+                            color: Colors.white, size: 42)
+                            .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
                         const SizedBox(height: 12),
                         Text(
                           "Book Rabbit",
@@ -66,7 +69,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
-                        ),
+                        ).animate().fade(delay: 100.ms).slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
                         const SizedBox(height: 28),
                         Expanded(
                           child: Row(
@@ -74,15 +77,18 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                             children: [
                               Expanded(
                                   child: Image.asset(cricketRabbitUrl,
-                                      fit: BoxFit.contain)),
+                                      fit: BoxFit.contain)
+                                      .animate().fade(delay: 200.ms).slideY(begin: 0.2)),
                               const SizedBox(width: 8),
                               Expanded(
                                   child: Image.asset(footballRabbitUrl,
-                                      fit: BoxFit.contain)),
+                                      fit: BoxFit.contain)
+                                      .animate().fade(delay: 250.ms).slideY(begin: 0.2)),
                               const SizedBox(width: 8),
                               Expanded(
                                   child: Image.asset(tennisRabbitUrl,
-                                      fit: BoxFit.contain)),
+                                      fit: BoxFit.contain)
+                                      .animate().fade(delay: 300.ms).slideY(begin: 0.2)),
                             ],
                           ),
                         ),
@@ -94,7 +100,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
+                        ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                         const SizedBox(height: 10),
                         Text(
                           "Book Rabbit lets you instantly manage your sports grounds.",
@@ -104,7 +110,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                             color: Colors.white.withValues(alpha: .95),
                             height: 1.5,
                           ),
-                        ),
+                        ).animate().fade(delay: 450.ms).slideY(begin: 0.1),
                         const SizedBox(height: 30),
                         TextField(
                           controller: phoneController,
@@ -136,46 +142,44 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                        ),
+                        ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                         const SizedBox(height: 18),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 0,
-                            ),
-                            onPressed: () {
-                              if (phoneController.text.length != 10) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Please enter a valid 10-digit mobile number."),
-                                    backgroundColor: Colors.redAccent,
-                                  ),
-                                );
-                                return;
-                              }
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => OtpScreen(phone: phoneController.text),
+                        TouchableOpacity(
+                          onTap: () {
+                            if (phoneController.text.length != 10) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please enter a valid 10-digit mobile number."),
+                                  backgroundColor: Colors.redAccent,
                                 ),
                               );
-                            },
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => OtpScreen(phone: phoneController.text),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
                             child: Text(
                               "LOGIN",
                               style: GoogleFonts.inter(
+                                color: Colors.black,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 1.5,
                               ),
                             ),
                           ),
-                        ),
+                        ).animate().fade(delay: 550.ms).slideY(begin: 0.1),
                         const SizedBox(height: 12),
                         Align(
                           alignment: Alignment.centerRight,

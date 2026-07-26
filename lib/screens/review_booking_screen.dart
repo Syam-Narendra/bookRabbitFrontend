@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../services/booking_service.dart';
+import '../widgets/touchable_opacity.dart';
 import 'booking_success_screen.dart';
 
 class ReviewBookingScreen extends StatefulWidget {
@@ -167,13 +169,15 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Booking Summary', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              const Text('Booking Summary', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))
+                  .animate().fade(duration: 300.ms).slideY(begin: 0.1),
               const SizedBox(height: 24),
-              _buildSummaryCard(),
+              _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
               const SizedBox(height: 24),
-              const Text('Payment Details', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('Payment Details', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))
+                  .animate().fade(delay: 200.ms).slideY(begin: 0.1),
               const SizedBox(height: 16),
-              _buildPaymentCard(),
+              _buildPaymentCard().animate().fade(delay: 300.ms).slideY(begin: 0.1),
               const Spacer(),
               const Center(
                 child: Text.rich(
@@ -188,29 +192,27 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                     ],
                   ),
                 ),
-              ),
+              ).animate().fade(delay: 400.ms),
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: _isCreatingOrder ? null : _startPayment,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE54F3F),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              TouchableOpacity(
+                onTap: _isCreatingOrder ? null : _startPayment,
+                child: Container(
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE54F3F),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  alignment: Alignment.center,
                   child: _isCreatingOrder
                       ? const SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                         )
-                      : Text('Pay ₹${widget.finalPrice}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      : Text('Pay ₹${widget.finalPrice}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
-              ),
+              ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
             ],
           ),
         ),

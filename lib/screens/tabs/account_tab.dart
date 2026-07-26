@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../constants.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_client.dart';
 import '../../services/booking_service.dart';
+import '../../widgets/touchable_opacity.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -102,6 +104,29 @@ class _AccountTabState extends State<AccountTab> {
   }
 
   Future<void> _logout() async {
+    final bool? shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1C1C1E),
+          title: const Text('Confirm Logout', style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Color(0xFF98989E))),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Log Out', style: TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true) return;
+
     await AuthService.logout();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
@@ -180,7 +205,7 @@ class _AccountTabState extends State<AccountTab> {
             'Profile',
             style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
           ),
-        ),
+        ).animate().fade(duration: 300.ms).slideX(begin: -0.1, end: 0, curve: Curves.easeOut),
         const SizedBox(height: 32),
         
         // Profile Photo Section
@@ -237,7 +262,7 @@ class _AccountTabState extends State<AccountTab> {
               ),
             ],
           ),
-        ),
+        ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
         
         const SizedBox(height: 32),
         
@@ -334,7 +359,7 @@ class _AccountTabState extends State<AccountTab> {
               ],
             ),
           ),
-        ),
+        ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
         const SizedBox(height: 16),
         
         // Stats Section
@@ -343,9 +368,9 @@ class _AccountTabState extends State<AccountTab> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatCard('Games', '$_gamesCount', Icons.sports_soccer),
-              _buildStatCard('Hours', _formatHours(_hoursTotal), Icons.schedule),
-              _buildStatCard('Upcoming Games', '$_upcomingCount', Icons.event),
+              _buildStatCard('Games', '$_gamesCount', Icons.sports_soccer).animate().fade(delay: 300.ms).slideY(begin: 0.2),
+              _buildStatCard('Hours', _formatHours(_hoursTotal), Icons.schedule).animate().fade(delay: 350.ms).slideY(begin: 0.2),
+              _buildStatCard('Upcoming Games', '$_upcomingCount', Icons.event).animate().fade(delay: 400.ms).slideY(begin: 0.2),
             ],
           ),
         ),
@@ -357,17 +382,17 @@ class _AccountTabState extends State<AccountTab> {
           if (await canLaunchUrl(url)) {
             await launchUrl(url);
           }
-        }),
+        }).animate().fade(delay: 500.ms).slideY(begin: 0.1),
         _buildMenuOption('Terms & Conditions', Icons.description_outlined, onTap: () async {
           final url = Uri.parse('${AppConstants.apiBaseUrl}/terms');
           if (await canLaunchUrl(url)) {
             await launchUrl(url);
           }
-        }),
-        _buildMenuOption('Log Out', Icons.logout, isDestructive: true, onTap: _logout),
+        }).animate().fade(delay: 550.ms).slideY(begin: 0.1),
+        _buildMenuOption('Log Out', Icons.logout, isDestructive: true, onTap: _logout).animate().fade(delay: 600.ms).slideY(begin: 0.1),
         
         const SizedBox(height: 24),
-        _buildInviteBanner(),
+        _buildInviteBanner().animate().fade(delay: 700.ms).scale(),
       ],
     );
   }

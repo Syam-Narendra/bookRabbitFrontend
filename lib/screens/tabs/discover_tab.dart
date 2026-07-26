@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../ground_details_screen.dart';
 
 import '../../services/ground_service.dart';
@@ -72,7 +74,41 @@ class _DiscoverTabState extends State<DiscoverTab> {
         const SizedBox(height: 12),
         Expanded(
           child: isLoading 
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFE54F3F)))
+            ? GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 140.0),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                  childAspectRatio: 0.66,
+                ),
+                itemCount: 6,
+                itemBuilder: (context, index) {
+                  return Shimmer.fromColors(
+                    baseColor: const Color(0xFF2C2C2E),
+                    highlightColor: const Color(0xFF3A3A3C),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(height: 14, width: double.infinity, color: Colors.white),
+                        const SizedBox(height: 4),
+                        Container(height: 12, width: 80, color: Colors.white),
+                        const SizedBox(height: 4),
+                        Container(height: 12, width: 120, color: Colors.white),
+                      ],
+                    ),
+                  );
+                },
+              )
             : hasError
               ? Center(
                   child: Column(
@@ -105,7 +141,10 @@ class _DiscoverTabState extends State<DiscoverTab> {
                     ),
                     itemCount: filteredGrounds.length,
                     itemBuilder: (context, index) {
-                      return _buildGroundCard(context, filteredGrounds[index]);
+                      return _buildGroundCard(context, filteredGrounds[index])
+                        .animate()
+                        .fade(duration: const Duration(milliseconds: 300), delay: Duration(milliseconds: index * 50))
+                        .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
                     },
                   ),
         ),
@@ -289,15 +328,18 @@ class _DiscoverTabState extends State<DiscoverTab> {
         children: [
           // Image
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                image: DecorationImage(
-                  image: ground['imageUrl'].startsWith('http')
-                      ? NetworkImage(ground['imageUrl']) as ImageProvider
-                      : AssetImage(ground['imageUrl']),
-                  fit: BoxFit.cover,
+            child: Hero(
+              tag: 'ground_image_${ground['id'] ?? ground['title']}',
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: ground['imageUrl'].startsWith('http')
+                        ? NetworkImage(ground['imageUrl']) as ImageProvider
+                        : AssetImage(ground['imageUrl']),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
@@ -349,7 +391,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  ground['location'],
+                  ground['city']?.toString().isNotEmpty == true ? ground['city'] : ground['location'],
                   style: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

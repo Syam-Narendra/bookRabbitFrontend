@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/booking_service.dart';
 import '../booking_detail_screen.dart';
+import '../../widgets/touchable_opacity.dart';
 
 class HistoryTab extends StatefulWidget {
   const HistoryTab({super.key});
@@ -83,7 +85,7 @@ class _HistoryTabState extends State<HistoryTab> {
               const Text(
                 'History',
                 style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-              ),
+              ).animate().fade(duration: 300.ms).slideX(begin: -0.1, end: 0, curve: Curves.easeOut),
               
             ],
           ),
@@ -124,7 +126,7 @@ class _HistoryTabState extends State<HistoryTab> {
               );
             }).toList(),
           ),
-        ),
+        ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
         const SizedBox(height: 16),
         
         // Content List
@@ -144,32 +146,32 @@ class _HistoryTabState extends State<HistoryTab> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12.0),
                       child: Text('Upcoming bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                    ),
-                    ...mockBookings.where((b) => b['status'] == 'Upcoming').map((b) => _buildBookingCard(b)),
+                    ).animate().fade(delay: 150.ms),
+                    ...mockBookings.where((b) => b['status'] == 'Upcoming').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
                   ],
                   if (mockBookings.any((b) => b['status'] == 'Completed')) ...[
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12.0),
                       child: Text('Completed bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                    ),
-                    ...mockBookings.where((b) => b['status'] == 'Completed').map((b) => _buildBookingCard(b)),
+                    ).animate().fade(delay: 150.ms),
+                    ...mockBookings.where((b) => b['status'] == 'Completed').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
                   ],
                   if (mockBookings.any((b) => b['status'] == 'Cancelled')) ...[
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12.0),
                       child: Text('Cancelled bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                    ),
-                    ...mockBookings.where((b) => b['status'] == 'Cancelled').map((b) => _buildBookingCard(b)),
+                    ).animate().fade(delay: 150.ms),
+                    ...mockBookings.where((b) => b['status'] == 'Cancelled').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
                   ],
                 ]
-              : displayedBookings.map((b) => _buildBookingCard(b)).toList(),
+              : displayedBookings.asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)).toList(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildBookingCard(Map<String, dynamic> booking) {
+  Widget _buildBookingCard(Map<String, dynamic> booking, int index) {
     Color statusColor;
     Color statusBgColor;
     if (booking['status'] == 'Upcoming') {
@@ -183,7 +185,7 @@ class _HistoryTabState extends State<HistoryTab> {
       statusBgColor = const Color(0xFFE54F3F).withValues(alpha: 0.15);
     }
 
-    return GestureDetector(
+    return TouchableOpacity(
       onTap: () {
         Navigator.push(
           context,
@@ -282,6 +284,6 @@ class _HistoryTabState extends State<HistoryTab> {
         ],
       ),
       ),
-    );
+    ).animate().fade(duration: 300.ms, delay: Duration(milliseconds: 100 + (index * 50))).slideY(begin: 0.1, duration: 300.ms, curve: Curves.easeOutCubic);
   }
 }

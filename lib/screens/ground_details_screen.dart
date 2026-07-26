@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'review_booking_screen.dart';
 import '../services/ground_service.dart';
 
@@ -257,39 +259,42 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Builder(
-              builder: (context) {
-                final images = widget.ground['images'] as List<dynamic>? ?? [];
-                if (images.isEmpty) {
-                  final fallbackUrl = widget.ground['imageUrl'] ?? 'assets/images/sports_bunnies.png';
-                  if (fallbackUrl.toString().startsWith('http')) {
-                    return Image.network(
-                      fallbackUrl,
-                      fit: BoxFit.cover,
-                    );
-                  } else {
-                    return Image.asset(
-                      fallbackUrl,
-                      fit: BoxFit.cover,
-                    );
+            Hero(
+              tag: 'ground_image_${widget.ground['id'] ?? widget.ground['title']}',
+              child: Builder(
+                builder: (context) {
+                  final images = widget.ground['images'] as List<dynamic>? ?? [];
+                  if (images.isEmpty) {
+                    final fallbackUrl = widget.ground['imageUrl'] ?? 'assets/images/sports_bunnies.png';
+                    if (fallbackUrl.toString().startsWith('http')) {
+                      return Image.network(
+                        fallbackUrl,
+                        fit: BoxFit.cover,
+                      );
+                    } else {
+                      return Image.asset(
+                        fallbackUrl,
+                        fit: BoxFit.cover,
+                      );
+                    }
                   }
+                  return CarouselSlider(
+                    options: CarouselOptions(
+                      height: 280.0,
+                      viewportFraction: 1.0,
+                      autoPlay: images.length > 1,
+                      autoPlayInterval: const Duration(seconds: 4),
+                    ),
+                    items: images.map((url) {
+                      return Image.network(
+                        url as String,
+                        fit: BoxFit.cover,
+                        width: MediaQuery.of(context).size.width,
+                      );
+                    }).toList(),
+                  );
                 }
-                return CarouselSlider(
-                  options: CarouselOptions(
-                    height: 280.0,
-                    viewportFraction: 1.0,
-                    autoPlay: images.length > 1,
-                    autoPlayInterval: const Duration(seconds: 4),
-                  ),
-                  items: images.map((url) {
-                    return Image.network(
-                      url as String,
-                      fit: BoxFit.cover,
-                      width: MediaQuery.of(context).size.width,
-                    );
-                  }).toList(),
-                );
-              }
+              ),
             ),
             // Gradient overlay for readability
             Positioned(
@@ -354,12 +359,13 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         ),
         const SizedBox(height: 12),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Icon(Icons.location_on, color: Color(0xFF98989E), size: 16),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                '${widget.ground['location']} • ${widget.ground['type']}',
+                '${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']} • ${widget.ground['type']}',
                 style: const TextStyle(color: Color(0xFF98989E), fontSize: 14),
               ),
             ),
@@ -794,6 +800,19 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             mainAxisSpacing: 10,
           ),
           itemBuilder: (context, index) {
+            if (_isLoadingAvailability) {
+              return Shimmer.fromColors(
+                baseColor: const Color(0xFF2C2C2E),
+                highlightColor: const Color(0xFF3A3A3C),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              );
+            }
+
             final slot = _timeSlots[index];
             final slot24 = _timeSlots24[index];
             final isSelected = _selectedStartTime == slot;
@@ -844,19 +863,22 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       slot,
                       style: TextStyle(
                         color: textColor,
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                     if (badge != null)
-                      Text(
-                        badge,
-                        style: TextStyle(color: textColor.withValues(alpha: 0.85), fontSize: 9),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          badge,
+                          style: TextStyle(color: textColor, fontSize: 10),
+                        ),
                       ),
                   ],
                 ),
               ),
-            );
+            ).animate().fade(duration: const Duration(milliseconds: 200), delay: Duration(milliseconds: index * 10));
           },
         ),
         const SizedBox(height: 16),

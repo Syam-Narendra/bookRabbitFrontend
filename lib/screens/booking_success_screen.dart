@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../widgets/touchable_opacity.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
   final String? referenceId;
@@ -37,24 +39,24 @@ class BookingSuccessScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check_circle, color: Color(0xFFE54F3F), size: 64),
-              ),
+              ).animate().fade(duration: 500.ms).scale(curve: Curves.elasticOut),
               const SizedBox(height: 24),
               const Text(
                 'Booking Confirmed',
                 style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
-              ),
+              ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
               const SizedBox(height: 8),
               if (referenceId != null)
                 Text(
                   'Reference ID: $referenceId',
                   style: const TextStyle(color: Color(0xFF98989E), fontSize: 15, fontWeight: FontWeight.w600),
-                )
+                ).animate().fade(delay: 300.ms).slideY(begin: 0.1)
               else
                 const Text(
                   'Your payment was successful. Your booking will appear shortly.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Color(0xFF98989E), fontSize: 14),
-                ),
+                ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
               const SizedBox(height: 32),
               Container(
                 width: double.infinity,
@@ -84,23 +86,21 @@ class BookingSuccessScreen extends StatelessWidget {
                     _buildIconDetail(Icons.payments, 'Paid ₹$finalPrice'),
                   ],
                 ),
-              ),
+              ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
               const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE54F3F),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              TouchableOpacity(
+                onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
+                child: Container(
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE54F3F),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text('Done', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  alignment: Alignment.center,
+                  child: const Text('Done', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
-              ),
+              ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
             ],
           ),
         ),

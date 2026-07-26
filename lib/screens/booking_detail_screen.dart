@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class BookingDetailScreen extends StatelessWidget {
   final Map<String, dynamic> booking;
@@ -82,15 +83,15 @@ class BookingDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
+                  ).animate().fade(duration: 300.ms).slideY(begin: 0.1),
                   const SizedBox(height: 4),
                   Text(
                     booking['type']?.toString() ?? '',
                     style: const TextStyle(color: Color(0xFF98989E), fontSize: 14),
-                  ),
+                  ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
                   const SizedBox(height: 16),
                   if ((booking['address'] as String?)?.isNotEmpty == true)
-                    _buildDetailRow(Icons.location_on, booking['address'].toString()),
+                    _buildDetailRow(Icons.location_on, booking['address'].toString()).animate().fade(delay: 150.ms).slideY(begin: 0.1),
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -113,7 +114,7 @@ class BookingDetailScreen extends StatelessWidget {
                         ],
                       ],
                     ),
-                  ),
+                  ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -140,7 +141,7 @@ class BookingDetailScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
+                  ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
                 ],
               ),
             ),
