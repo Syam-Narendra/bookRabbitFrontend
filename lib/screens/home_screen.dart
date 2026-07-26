@@ -34,20 +34,20 @@ class _HomeScreenState extends State<HomeScreen> {
             // Using IndexedStack preserves state of tabs (e.g. search query)
             IndexedStack(
               index: _currentIndex,
-              children: const [
-                DiscoverTab(),
-                HistoryTab(),
-                AccountTab(),
+              children: [
+                DiscoverTab(
+                  onProfileTapped: () {
+                    setState(() {
+                      _currentIndex = 2; // Switch to AccountTab
+                    });
+                  },
+                ),
+                const HistoryTab(),
+                const AccountTab(),
               ],
             ),
             
-            // Top Gradient and Logo
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: _buildTopOverlay(),
-            ),
+
             
             // Bottom Gradient and Navigation
             Positioned(
@@ -137,42 +137,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTopOverlay() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: Container(
-          padding: const EdgeInsets.only(top: 24, bottom: 20, left: 24, right: 24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF161616).withOpacity(0.95),
-                const Color(0xFF161616).withOpacity(0.8),
-                const Color(0xFF161616).withOpacity(0.0),
-              ],
-              stops: const [0.0, 0.5, 1.0],
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.cruelty_free, color: Color(0xFFE54F3F), size: 28),
-              const SizedBox(width: 8),
-              const Text(
-                'Book Rabbit',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

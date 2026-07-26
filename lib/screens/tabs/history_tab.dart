@@ -81,14 +81,7 @@ class _HistoryTabState extends State<HistoryTab> {
                 'History',
                 style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
               ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2C2C2E),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.tune, color: Colors.white, size: 20),
-              ),
+              
             ],
           ),
         ),

@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'review_booking_screen.dart';
 
 class GroundDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
@@ -32,20 +34,106 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   }
 
   void _generateTimeSlots() {
-    // Generate slots from 10:00 AM to 8:00 PM in 30 min intervals
+    _timeSlots.clear();
+    
+    String openTimeStr = widget.ground['open_time']?.toString() ?? '10:00';
+    String closeTimeStr = widget.ground['close_time']?.toString() ?? '20:00';
+    
     int startHour = 10;
+    int startMin = 0;
     int endHour = 20;
+    int endMin = 0;
+    
+    try {
+      final openParts = openTimeStr.split(':');
+      if (openParts.length >= 2) {
+        startHour = int.parse(openParts[0]);
+        startMin = int.parse(openParts[1]);
+      }
+      
+      final closeParts = closeTimeStr.split(':');
+      if (closeParts.length >= 2) {
+        endHour = int.parse(closeParts[0]);
+        endMin = int.parse(closeParts[1]);
+      }
+    } catch (e) {
+      // Fallback to default times on parse error
+    }
+    
+    int startTotalMins = startHour * 60 + startMin;
+    int endTotalMins = endHour * 60 + endMin;
+    
+    // Handle overnight slots (e.g. open 22:00, close 06:00)
+    if (endTotalMins <= startTotalMins) {
+      endTotalMins += 24 * 60;
+    }
+    
+    // Generate slots in 30 min intervals
+    // We only generate a start time if there is at least 30 mins before closing
+    for (int currentMins = startTotalMins; currentMins <= endTotalMins - 30; currentMins += 30) {
+      int h = (currentMins ~/ 60) % 24;
+      int m = currentMins % 60;
+      
+      String ampm = h >= 12 ? 'PM' : 'AM';
+      int displayHour = h > 12 ? h - 12 : (h == 0 ? 12 : h);
+      String minStr = m.toString().padLeft(2, '0');
+      
+      _timeSlots.add('$displayHour:$minStr $ampm');
+    }
+  }
 
-    for (int h = startHour; h <= endHour; h++) {
-      for (int m = 0; m < 60; m += 30) {
-        if (h == endHour && m > 0) break; // End exactly at 8:00 PM
-        
+  int _timeToMins(String timeStr) {
+    final parts = timeStr.split(' ');
+    final timeParts = parts[0].split(':');
+    int hours = int.parse(timeParts[0]);
+    int mins = int.parse(timeParts[1]);
+    bool isPM = parts[1] == 'PM';
+    if (isPM && hours != 12) hours += 12;
+    if (!isPM && hours == 12) hours = 0;
+    return hours * 60 + mins;
+  }
+
+  String _calculateEndTime(String startTime, int durationMins) {
+    int totalMins = _timeToMins(startTime) + durationMins;
+    int endHours = (totalMins ~/ 60) % 24;
+    int endMins = totalMins % 60;
+    String endAmPm = endHours >= 12 ? 'PM' : 'AM';
+    int displayEndHours = endHours > 12 ? endHours - 12 : (endHours == 0 ? 12 : endHours);
+    String displayEndMins = endMins.toString().padLeft(2, '0');
+    return '$displayEndHours:$displayEndMins $endAmPm';
+  }
+
+  String _formatApiTime(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return '';
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        int h = int.parse(parts[0]);
+        int m = int.parse(parts[1]);
         String ampm = h >= 12 ? 'PM' : 'AM';
         int displayHour = h > 12 ? h - 12 : (h == 0 ? 12 : h);
-        String minStr = m == 0 ? '00' : '30';
-        
-        _timeSlots.add('$displayHour:$minStr $ampm');
+        String minStr = m.toString().padLeft(2, '0');
+        return '$displayHour:$minStr $ampm';
       }
+    } catch (e) {
+      // Fallback
+    }
+    return timeStr;
+  }
+
+  String _getOpenCloseText() {
+    String openStr = widget.ground['open_time']?.toString() ?? '10:00';
+    String closeStr = widget.ground['close_time']?.toString() ?? '20:00';
+    return 'Open ${_formatApiTime(openStr)} - ${_formatApiTime(closeStr)}';
+  }
+
+  String _formatDuration(int mins) {
+    if (mins % 60 == 0) {
+      int hrs = mins ~/ 60;
+      return '$hrs hr${hrs > 1 ? 's' : ''}';
+    } else {
+      double hrs = mins / 60;
+      return '${hrs.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')} hrs';
     }
   }
 
@@ -68,30 +156,23 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           width: isDesktop ? 450 : double.infinity,
           height: double.infinity,
           color: const Color(0xFF161616),
-          child: Column(
-            children: [
-              Expanded(
-                child: CustomScrollView(
-                  slivers: [
-                    _buildSliverAppBar(),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildTitleAndDetails(),
-                            const SizedBox(height: 32),
-                            _buildTimeSlotsSection(),
-                            const SizedBox(height: 40),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+          child: CustomScrollView(
+            slivers: [
+              _buildSliverAppBar(),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitleAndDetails(),
+                      const SizedBox(height: 32),
+                      _buildTimeSlotsSection(),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
-              _buildBottomBar(),
             ],
           ),
         ),
@@ -118,14 +199,39 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            PageView.builder(
-              itemCount: 3, // Simulate carousel
-              itemBuilder: (context, index) {
-                return Image.network(
-                  widget.ground['imageUrl'],
-                  fit: BoxFit.cover,
+            Builder(
+              builder: (context) {
+                final images = widget.ground['images'] as List<dynamic>? ?? [];
+                if (images.isEmpty) {
+                  final fallbackUrl = widget.ground['imageUrl'] ?? 'assets/images/sports_bunnies.png';
+                  if (fallbackUrl.toString().startsWith('http')) {
+                    return Image.network(
+                      fallbackUrl,
+                      fit: BoxFit.cover,
+                    );
+                  } else {
+                    return Image.asset(
+                      fallbackUrl,
+                      fit: BoxFit.cover,
+                    );
+                  }
+                }
+                return CarouselSlider(
+                  options: CarouselOptions(
+                    height: 280.0,
+                    viewportFraction: 1.0,
+                    autoPlay: images.length > 1,
+                    autoPlayInterval: const Duration(seconds: 4),
+                  ),
+                  items: images.map((url) {
+                    return Image.network(
+                      url as String,
+                      fit: BoxFit.cover,
+                      width: MediaQuery.of(context).size.width,
+                    );
+                  }).toList(),
                 );
-              },
+              }
             ),
             // Gradient overlay for readability
             Positioned(
@@ -216,9 +322,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Open 10:00 AM - 08:00 PM',
-              style: TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold),
+            Text(
+              _getOpenCloseText(),
+              style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -227,29 +333,65 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   }
 
   void _showDurationBottomSheet(String slot) {
+    int startMins = _timeToMins(slot);
+    String closeTimeStr = widget.ground['close_time']?.toString() ?? '20:00';
+    int closeMins = 20 * 60;
+    try {
+      final parts = closeTimeStr.split(':');
+      if (parts.length >= 2) {
+        closeMins = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+      }
+    } catch (_) {}
+    
+    if (closeMins <= startMins) {
+      closeMins += 24 * 60;
+    }
+    
+    int maxAllowedMins = closeMins - startMins;
+    if (maxAllowedMins > 11 * 60) {
+      maxAllowedMins = 11 * 60; // Cap at 11 hours
+    }
+    
     int localDuration = 60; // Default
+    if (localDuration > maxAllowedMins) {
+      localDuration = maxAllowedMins;
+    }
 
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1C1C1E),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+            return SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 24.0,
+                    right: 24.0,
+                    top: 24.0,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 24.0,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Start Time: $slot',
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          
+                          const SizedBox(width: 8),
+                          const Text(
+                            'How long do you want to play?',
+                            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.white54),
@@ -257,60 +399,131 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       )
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'How much time to play?',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 32, top: 4, bottom: 24),
+                    child: Text(
+                      '${_formatDuration(localDuration)} — ends at ${_calculateEndTime(slot, localDuration)}',
+                      style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2C2C2E),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          onPressed: localDuration <= 30
-                              ? null
-                              : () {
-                                  setModalState(() {
-                                    localDuration -= 30;
-                                  });
-                                },
-                          icon: const Icon(Icons.remove_circle_outline),
-                          color: const Color(0xFFE54F3F),
-                          disabledColor: Colors.white24,
-                          iconSize: 32,
-                        ),
-                        Column(
-                          children: [
-                            Text(
-                              '$localDuration',
-                              style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: InkWell(
+                            onTap: localDuration <= 30
+                                ? null
+                                : () {
+                                    setModalState(() {
+                                      localDuration -= 30;
+                                    });
+                                  },
+                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(32)),
+                            child: const Center(
+                              child: Icon(Icons.remove, color: Colors.black, size: 28),
                             ),
-                            const Text(
-                              'mins',
-                              style: TextStyle(color: Color(0xFF98989E), fontSize: 12),
-                            ),
-                          ],
+                          ),
                         ),
-                        IconButton(
-                          onPressed: () {
-                            setModalState(() {
-                              localDuration += 30;
-                            });
-                          },
-                          icon: const Icon(Icons.add_circle_outline),
-                          color: const Color(0xFFE54F3F),
-                          iconSize: 32,
+                        Container(width: 1, height: 40, color: Colors.grey[300]),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _formatDuration(localDuration),
+                                style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'until ${_calculateEndTime(slot, localDuration)}',
+                                style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(width: 1, height: 40, color: Colors.grey[300]),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFCECEB),
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(32)),
+                              border: Border.all(color: const Color(0xFFE54F3F), width: 2),
+                            ),
+                            child: InkWell(
+                              onTap: (localDuration + 30) > maxAllowedMins
+                                  ? null
+                                  : () {
+                                      setModalState(() {
+                                        localDuration += 30;
+                                      });
+                                    },
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(32)),
+                              child: Center(
+                                child: Icon(Icons.add, color: (localDuration + 30) > maxAllowedMins ? Colors.grey : const Color(0xFFE54F3F), size: 28),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(
+                      'Tap + / - to adjust in 30-min steps · max ${_formatDuration(maxAllowedMins)}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ),
                   const SizedBox(height: 24),
+                  // Summary Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C2C2E),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('TOTAL TO PAY', style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.5)),
+                        const SizedBox(height: 4),
+                        Builder(
+                          builder: (context) {
+                            int fare = (_basePrice / 2 * (localDuration ~/ 30)).round();
+                            int platformFee = (fare * 0.03).round();
+                            if (platformFee < 10 && fare > 0) platformFee = 10;
+                            int finalPrice = fare + platformFee;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('₹$finalPrice', style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 32, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Text('₹$fare fare + ₹$platformFee platform fee', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _buildCardPill('FROM', slot),
+                                    _buildCardPill('TO', _calculateEndTime(slot, localDuration)),
+                                    _buildCardPill('DURATION', _formatDuration(localDuration), highlight: true),
+                                    _buildCardPill('RATE', '₹$_basePrice/hr'),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -320,7 +533,21 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                           _selectedStartTime = slot;
                           _durationMins = localDuration;
                         });
-                        Navigator.pop(context);
+                        Navigator.pop(context); // Close BottomSheet
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ReviewBookingScreen(
+                              ground: widget.ground,
+                              startTime: slot,
+                              endTime: _calculateEndTime(slot, localDuration),
+                              durationStr: _formatDuration(localDuration),
+                              fare: (_basePrice / 2 * (localDuration ~/ 30)).round(),
+                              platformFee: ((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round() < 10 && (_basePrice / 2 * (localDuration ~/ 30)).round() > 0 ? 10 : ((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round(),
+                              finalPrice: (_basePrice / 2 * (localDuration ~/ 30)).round() + (((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round() < 10 && (_basePrice / 2 * (localDuration ~/ 30)).round() > 0 ? 10 : ((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round()),
+                            ),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE54F3F),
@@ -330,18 +557,23 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Confirm Duration',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Confirm Booking', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, size: 18),
+                        ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                 ],
               ),
-            );
-          },
-        );
+            ),
+           ),
+          );
+        });
       },
     );
   }
@@ -409,82 +641,31 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     );
   }
 
-  Widget _buildBottomBar() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF161616).withOpacity(0.9),
-            border: Border(
-              top: BorderSide(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
+
+
+  Widget _buildCardPill(String title, String value, {bool highlight = false}) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Text(title, style: const TextStyle(color: Colors.white60, fontSize: 9, letterSpacing: 0.5)),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: highlight ? const Color(0xFFE54F3F) : Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total Price',
-                        style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₹$_totalPrice',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: SizedBox(
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _selectedStartTime == null
-                          ? null
-                          : () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Booking Confirmed!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              Navigator.pop(context);
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE54F3F),
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFF2C2C2E),
-                        disabledForegroundColor: Colors.white38,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Book Now',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

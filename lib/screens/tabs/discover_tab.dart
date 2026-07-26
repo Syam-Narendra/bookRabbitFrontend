@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import '../ground_details_screen.dart';
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:carousel_slider/carousel_slider.dart';
+import '../../constants.dart';
+
 class DiscoverTab extends StatefulWidget {
-  const DiscoverTab({super.key});
+  final VoidCallback? onProfileTapped;
+
+  const DiscoverTab({super.key, this.onProfileTapped});
 
   @override
   State<DiscoverTab> createState() => _DiscoverTabState();
@@ -11,60 +18,67 @@ class DiscoverTab extends StatefulWidget {
 class _DiscoverTabState extends State<DiscoverTab> {
   String _searchQuery = '';
   String _selectedCategory = 'All';
+  List<Map<String, dynamic>> allGrounds = [];
+  bool isLoading = true;
+  bool hasError = false;
 
-  static final List<String> categories = [
-    'All',
-    'Cricket',
-    'Football',
-    'Pickleball',
-    'Basketball',
-    'Badminton',
-    'Volleyball'
+  static final List<Map<String, dynamic>> categoryData = [
+    {'name': 'All', 'icon': Icons.auto_awesome},
+    {'name': 'Cricket', 'icon': Icons.sports_cricket},
+    {'name': 'Football', 'icon': Icons.sports_soccer},
+    {'name': 'Pickleball', 'icon': Icons.sports_tennis},
+    {'name': 'Basketball', 'icon': Icons.sports_basketball},
+    {'name': 'Badminton', 'icon': Icons.sports_tennis},
+    {'name': 'Volleyball', 'icon': Icons.sports_volleyball},
   ];
 
-  static final List<Map<String, dynamic>> allGrounds = [
-    // 5 Cricket
-    {'title': 'Greenfield Ground', 'location': 'Midtown', 'price': '₹600/hr', 'category': 'Cricket', 'type': 'Nets', 'imageUrl': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Oval Park Arena', 'location': 'Downtown', 'price': '₹1200/hr', 'category': 'Cricket', 'type': 'Full Ground', 'imageUrl': 'https://images.unsplash.com/photo-1518605368461-1ee7e53086eb?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Strikers Practice', 'location': 'Westside', 'price': '₹500/hr', 'category': 'Cricket', 'type': 'Nets', 'imageUrl': 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1935&auto=format&fit=crop'},
-    {'title': 'Boundary Bashers', 'location': 'East End', 'price': '₹1500/hr', 'category': 'Cricket', 'type': 'Full Ground', 'imageUrl': 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=2067&auto=format&fit=crop'},
-    {'title': 'Pitch Perfect', 'location': 'North Hills', 'price': '₹800/hr', 'category': 'Cricket', 'type': 'Turf', 'imageUrl': 'https://images.unsplash.com/photo-1624314138470-5a2f24623f10?q=80&w=1974&auto=format&fit=crop'},
-    
-    // 5 Football
-    {'title': 'Goalazo Turf', 'location': 'South Park', 'price': '₹1000/hr', 'category': 'Football', 'type': '5v5', 'imageUrl': 'https://images.unsplash.com/photo-1518605368461-1ee7e53086eb?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Kickoff Arena', 'location': 'Midtown', 'price': '₹1800/hr', 'category': 'Football', 'type': '7v7', 'imageUrl': 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1935&auto=format&fit=crop'},
-    {'title': 'Champions Field', 'location': 'Downtown', 'price': '₹2500/hr', 'category': 'Football', 'type': '11v11', 'imageUrl': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Street Soccer', 'location': 'East End', 'price': '₹900/hr', 'category': 'Football', 'type': 'Turf', 'imageUrl': 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=2067&auto=format&fit=crop'},
-    {'title': 'Golden Boot', 'location': 'Westside', 'price': '₹1200/hr', 'category': 'Football', 'type': '5v5', 'imageUrl': 'https://images.unsplash.com/photo-1624314138470-5a2f24623f10?q=80&w=1974&auto=format&fit=crop'},
-    
-    // 5 Pickleball
-    {'title': 'Pickle Point', 'location': 'North Hills', 'price': '₹400/hr', 'category': 'Pickleball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?q=80&w=1974&auto=format&fit=crop'},
-    {'title': 'Smash Court', 'location': 'South Park', 'price': '₹450/hr', 'category': 'Pickleball', 'type': 'Outdoor', 'imageUrl': 'https://images.unsplash.com/photo-1587280501635-a19ee5aca3ab?q=80&w=2070&auto=format&fit=crop'},
-    {'title': 'Dink Arena', 'location': 'Downtown', 'price': '₹500/hr', 'category': 'Pickleball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Paddle Club', 'location': 'Midtown', 'price': '₹350/hr', 'category': 'Pickleball', 'type': 'Outdoor', 'imageUrl': 'https://images.unsplash.com/photo-1518605368461-1ee7e53086eb?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Rally Courts', 'location': 'East End', 'price': '₹400/hr', 'category': 'Pickleball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1935&auto=format&fit=crop'},
-    
-    // 5 Basketball
-    {'title': 'Hoop Dreams', 'location': 'Westside', 'price': '₹700/hr', 'category': 'Basketball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=2067&auto=format&fit=crop'},
-    {'title': 'Swish Arena', 'location': 'Downtown', 'price': '₹600/hr', 'category': 'Basketball', 'type': 'Outdoor', 'imageUrl': 'https://images.unsplash.com/photo-1624314138470-5a2f24623f10?q=80&w=1974&auto=format&fit=crop'},
-    {'title': 'Court Kings', 'location': 'North Hills', 'price': '₹800/hr', 'category': 'Basketball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Slam Dunk', 'location': 'South Park', 'price': '₹500/hr', 'category': 'Basketball', 'type': 'Outdoor', 'imageUrl': 'https://images.unsplash.com/photo-1518605368461-1ee7e53086eb?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Alley-Oop Center', 'location': 'East End', 'price': '₹750/hr', 'category': 'Basketball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1935&auto=format&fit=crop'},
-    
-    // 5 Badminton
-    {'title': 'Shuttle Masters', 'location': 'Midtown', 'price': '₹300/hr', 'category': 'Badminton', 'type': 'Wooden', 'imageUrl': 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?q=80&w=1974&auto=format&fit=crop'},
-    {'title': 'Smashers Club', 'location': 'Westside', 'price': '₹400/hr', 'category': 'Badminton', 'type': 'Synthetic', 'imageUrl': 'https://images.unsplash.com/photo-1587280501635-a19ee5aca3ab?q=80&w=2070&auto=format&fit=crop'},
-    {'title': 'Feather Courts', 'location': 'Downtown', 'price': '₹350/hr', 'category': 'Badminton', 'type': 'Wooden', 'imageUrl': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Drop Shot Arena', 'location': 'North Hills', 'price': '₹450/hr', 'category': 'Badminton', 'type': 'Synthetic', 'imageUrl': 'https://images.unsplash.com/photo-1518605368461-1ee7e53086eb?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Racket Hub', 'location': 'East End', 'price': '₹300/hr', 'category': 'Badminton', 'type': 'Wooden', 'imageUrl': 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1935&auto=format&fit=crop'},
-    
-    // 5 Volleyball
-    {'title': 'Spike Zone', 'location': 'South Park', 'price': '₹500/hr', 'category': 'Volleyball', 'type': 'Sand', 'imageUrl': 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=2067&auto=format&fit=crop'},
-    {'title': 'Net Ninjas', 'location': 'Midtown', 'price': '₹600/hr', 'category': 'Volleyball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1624314138470-5a2f24623f10?q=80&w=1974&auto=format&fit=crop'},
-    {'title': 'Block Party', 'location': 'Downtown', 'price': '₹450/hr', 'category': 'Volleyball', 'type': 'Sand', 'imageUrl': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Dig Center', 'location': 'Westside', 'price': '₹700/hr', 'category': 'Volleyball', 'type': 'Indoor', 'imageUrl': 'https://images.unsplash.com/photo-1518605368461-1ee7e53086eb?q=80&w=2000&auto=format&fit=crop'},
-    {'title': 'Ace Courts', 'location': 'North Hills', 'price': '₹550/hr', 'category': 'Volleyball', 'type': 'Sand', 'imageUrl': 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1935&auto=format&fit=crop'},
+  final List<String> promoBanners = [
+    'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchGrounds();
+  }
+
+  Future<void> _fetchGrounds() async {
+    try {
+      final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/api/public/grounds'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final grounds = data['grounds'] as List<dynamic>;
+        setState(() {
+          allGrounds = grounds.map<Map<String, dynamic>>((dynamic g) {
+            final groundMap = g as Map<String, dynamic>;
+            final images = groundMap['images'] as List<dynamic>? ?? [];
+            return <String, dynamic>{
+              ...groundMap,
+              'title': groundMap['name'] ?? '',
+              'location': groundMap['address'] ?? groundMap['city'] ?? '',
+              'price': '₹${groundMap['price_per_hour']}/hr',
+              'category': groundMap['type'] ?? 'All',
+              'type': groundMap['tag'] ?? groundMap['type'] ?? '',
+              'imageUrl': images.isNotEmpty ? images.first : 'assets/images/sports_bunnies.png',
+            };
+          }).toList();
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,56 +90,143 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
     return Column(
       children: [
-        const SizedBox(height: 90), // Padding for the glossy top bar
+        _buildHeader(),
         _buildTopSearch(),
         _buildChips(),
         const SizedBox(height: 12),
         Expanded(
-          child: filteredGrounds.isEmpty 
-            ? const Center(
-                child: Text(
-                  'No grounds found.',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              )
-            : GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 140.0),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
-                  childAspectRatio: 0.75,
-                ),
-                itemCount: filteredGrounds.length,
-                itemBuilder: (context, index) {
-                  return _buildGroundCard(context, filteredGrounds[index]);
-                },
-              ),
+          child: isLoading 
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFFE54F3F)))
+            : hasError
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Failed to load grounds', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _fetchGrounds,
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE54F3F)),
+                        child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                      )
+                    ],
+                  ),
+                )
+              : filteredGrounds.isEmpty 
+                ? const Center(
+                    child: Text(
+                      'No grounds found.',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 140.0),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16.0,
+                      mainAxisSpacing: 16.0,
+                      childAspectRatio: 0.75,
+                    ),
+                    itemCount: filteredGrounds.length,
+                    itemBuilder: (context, index) {
+                      return _buildGroundCard(context, filteredGrounds[index]);
+                    },
+                  ),
         ),
       ],
     );
   }
 
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 50, 16, 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Location Pin
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEBEBF5),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.location_on, color: Colors.black87, size: 20),
+          ),
+          const SizedBox(width: 12),
+          // Location Text
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Kondapur',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Land Mark Residency, Gachibowli,...',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          // Profile Button
+          GestureDetector(
+            onTap: widget.onProfileTapped,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Color(0xFF2C2C2E),
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: NetworkImage('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTopSearch() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 44,
+        height: 48,
         decoration: BoxDecoration(
-          color: const Color(0xFF2C2C2E),
-          borderRadius: BorderRadius.circular(22),
+          color: const Color(0xFF323232),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
             const SizedBox(width: 16),
-            const Icon(Icons.search, color: Color(0xFFEBEBF5), size: 20),
-            const SizedBox(width: 8),
+            const Icon(Icons.search, color: Color(0xFF8E8E93), size: 22),
+            const SizedBox(width: 12),
             Expanded(
               child: TextField(
-                style: const TextStyle(color: Color(0xFFEBEBF5), fontSize: 16, fontWeight: FontWeight.w400),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
                 decoration: const InputDecoration(
-                  hintText: 'Search fields and arenas',
-                  hintStyle: TextStyle(color: Color(0xFF98989E), fontSize: 16, fontWeight: FontWeight.w400),
+                  hintText: "Search by ground name or sport",
+                  hintStyle: TextStyle(color: Color(0xFF8E8E93), fontSize: 16),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -144,15 +245,18 @@ class _DiscoverTabState extends State<DiscoverTab> {
   }
 
   Widget _buildChips() {
-    return SizedBox(
-      height: 36,
+    return Container(
+      height: 70,
+      margin: const EdgeInsets.only(top: 24, bottom: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        itemCount: categories.length,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        itemCount: categoryData.length,
         itemBuilder: (context, index) {
-          final category = categories[index];
+          final data = categoryData[index];
+          final category = data['name'] as String;
           final isSelected = category == _selectedCategory;
+          final color = isSelected ? const Color(0xFFE54F3F) : const Color(0xFF8E8E93); 
           
           return GestureDetector(
             onTap: () {
@@ -161,20 +265,31 @@ class _DiscoverTabState extends State<DiscoverTab> {
               });
             },
             child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white : const Color(0xFF2C2C2E),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                category,
-                style: TextStyle(
-                  color: isSelected ? Colors.black : Colors.white, 
-                  fontSize: 14, 
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isSelected ? const Color(0xFFE54F3F) : Colors.transparent,
+                    width: 2,
+                  ),
                 ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(data['icon'] as IconData, color: color, size: 26),
+                  const SizedBox(height: 6),
+                  Text(
+                    category.toUpperCase(),
+                    style: TextStyle(
+                      color: color, 
+                      fontSize: 11, 
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
               ),
             ),
           );
@@ -203,7 +318,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 image: DecorationImage(
-                  image: NetworkImage(ground['imageUrl']),
+                  image: ground['imageUrl'].startsWith('http')
+                      ? NetworkImage(ground['imageUrl']) as ImageProvider
+                      : AssetImage(ground['imageUrl']),
                   fit: BoxFit.cover,
                 ),
               ),
