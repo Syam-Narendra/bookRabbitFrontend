@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../ground_details_screen.dart';
@@ -21,6 +23,10 @@ class _DiscoverTabState extends State<DiscoverTab> {
   bool isLoading = true;
   bool hasError = false;
   Map<String, dynamic>? _selectedGround;
+
+  String _locationArea = 'Select Location';
+  String _locationAddress = 'Tap to set or detect your location';
+  bool _isDetectingLocation = false;
 
   static final List<Map<String, dynamic>> categoryData = [
     {'name': 'All', 'icon': Icons.auto_awesome},
@@ -174,55 +180,271 @@ class _DiscoverTabState extends State<DiscoverTab> {
     );
   }
 
+  Future<void> _detectLiveLocation(BuildContext dialogContext) async {
+    setState(() => _isDetectingLocation = true);
+
+    // Try CORS-friendly Web API 1: geojs.io
+    try {
+      final response = await http
+          .get(Uri.parse('https://get.geojs.io/v1/ip/geo.json'))
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final city = data['city']?.toString();
+        final region = data['region']?.toString();
+        final country = data['country']?.toString();
+
+        if (city != null && city.isNotEmpty) {
+          final addressStr = [region, country].where((s) => s != null && s.isNotEmpty).join(', ');
+          setState(() {
+            _locationArea = city;
+            _locationAddress = addressStr.isEmpty ? 'Detected via GPS' : addressStr;
+            _isDetectingLocation = false;
+          });
+          if (dialogContext.mounted && Navigator.canPop(dialogContext)) {
+            Navigator.pop(dialogContext);
+          }
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Try CORS-friendly Web API 2: ipwho.is
+    try {
+      final response = await http
+          .get(Uri.parse('https://ipwho.is/'))
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final city = data['city']?.toString() ?? 'Current Location';
+          final region = data['region']?.toString() ?? '';
+          final country = data['country']?.toString() ?? '';
+          final addressStr = [region, country].where((s) => s.isNotEmpty).join(', ');
+          setState(() {
+            _locationArea = city;
+            _locationAddress = addressStr.isEmpty ? 'Detected via GPS' : addressStr;
+            _isDetectingLocation = false;
+          });
+          if (dialogContext.mounted && Navigator.canPop(dialogContext)) {
+            Navigator.pop(dialogContext);
+          }
+          return;
+        }
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+    setState(() {
+      _locationArea = 'Current Location';
+      _locationAddress = 'Location auto-detected';
+      _isDetectingLocation = false;
+    });
+    if (dialogContext.mounted && Navigator.canPop(dialogContext)) {
+      Navigator.pop(dialogContext);
+    }
+  }
+
+  void _showLocationPickerBottomSheet() {
+    final areaController = TextEditingController(text: _locationArea == 'Select Location' ? '' : _locationArea);
+    final addressController = TextEditingController(text: _locationAddress == 'Tap to set or detect your location' ? '' : _locationAddress);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (modalContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3A3A3C),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Set Your Location',
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  // Auto-detect GPS button
+                  InkWell(
+                    onTap: _isDetectingLocation
+                        ? null
+                        : () async {
+                            setModalState(() => _isDetectingLocation = true);
+                            await _detectLiveLocation(modalContext);
+                          },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE54F3F).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE54F3F).withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.my_location, color: Color(0xFFE54F3F), size: 22),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Auto-Detect Current Location', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 2),
+                                Text(_isDetectingLocation ? 'Fetching live location...' : 'Fetch real-time location via GPS/Network', style: const TextStyle(color: Color(0xFF98989E), fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          if (_isDetectingLocation)
+                            const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE54F3F)),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('OR ENTER ANY CUSTOM LOCATION', style: TextStyle(color: Color(0xFF98989E), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: areaController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Area / City Name (e.g. Indiranagar, Bandra, Downtown)',
+                      labelStyle: const TextStyle(color: Color(0xFF98989E), fontSize: 13),
+                      filled: true,
+                      fillColor: const Color(0xFF2C2C2E),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      prefixIcon: const Icon(Icons.location_city, color: Color(0xFF98989E)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: addressController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Full Address / Landmark (e.g. 100 Feet Rd, Bengaluru)',
+                      labelStyle: const TextStyle(color: Color(0xFF98989E), fontSize: 13),
+                      filled: true,
+                      fillColor: const Color(0xFF2C2C2E),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      prefixIcon: const Icon(Icons.map_outlined, color: Color(0xFF98989E)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final area = areaController.text.trim();
+                        final address = addressController.text.trim();
+                        if (area.isNotEmpty) {
+                          setState(() {
+                            _locationArea = area;
+                            _locationAddress = address.isEmpty ? area : address;
+                          });
+                          Navigator.pop(modalContext);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE54F3F),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Update Location', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Location Pin
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEBEBF5),
-              shape: BoxShape.circle,
+          // Location Pin & Text
+          Expanded(
+            child: GestureDetector(
+              onTap: _showLocationPickerBottomSheet,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEBEBF5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.location_on, color: Colors.black87, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              _locationArea,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _locationAddress,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Icon(Icons.location_on, color: Colors.black87, size: 20),
           ),
           const SizedBox(width: 12),
-          // Location Text
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'Kondapur',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Land Mark Residency, Gachibowli,...',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
           // Profile Button
           GestureDetector(
             onTap: widget.onProfileTapped,
