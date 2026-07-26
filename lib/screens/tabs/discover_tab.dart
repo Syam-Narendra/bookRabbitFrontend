@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ground_details_screen.dart';
 
 class DiscoverTab extends StatefulWidget {
   const DiscoverTab({super.key});
@@ -97,7 +98,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                 ),
                 itemCount: filteredGrounds.length,
                 itemBuilder: (context, index) {
-                  return _buildGroundCard(filteredGrounds[index]);
+                  return _buildGroundCard(context, filteredGrounds[index]);
                 },
               ),
         ),
@@ -182,75 +183,85 @@ class _DiscoverTabState extends State<DiscoverTab> {
     );
   }
 
-  Widget _buildGroundCard(Map<String, dynamic> ground) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Image
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              image: DecorationImage(
-                image: NetworkImage(ground['imageUrl']),
-                fit: BoxFit.cover,
+  Widget _buildGroundCard(BuildContext context, Map<String, dynamic> ground) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GroundDetailsScreen(ground: ground),
+          ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                image: DecorationImage(
+                  image: NetworkImage(ground['imageUrl']),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        
-        // Title
-        Text(
-          ground['title'],
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            letterSpacing: -0.5,
+          const SizedBox(height: 8),
+          
+          // Title
+          Text(
+            ground['title'],
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 2),
-        
-        // Price and Details
-        Row(
-          children: [
-            Text(
-              ground['price'],
-              style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                '• ${ground['type']}',
-                style: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 2),
+          
+          // Price and Details
+          Row(
+            children: [
+              Text(
+                ground['price'],
+                style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 13, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        
-        // Location
-        Row(
-          children: [
-            const Icon(Icons.location_on, color: Color(0xFF98989E), size: 12),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                ground['location'],
-                style: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '• ${ground['type']}',
+                  style: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+          const SizedBox(height: 2),
+          
+          // Location
+          Row(
+            children: [
+              const Icon(Icons.location_on, color: Color(0xFF98989E), size: 12),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  ground['location'],
+                  style: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

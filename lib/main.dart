@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
+import 'screens/vendor_login_screen.dart';
 import 'screens/otp_screen.dart';
 import 'screens/setup_profile_screen.dart';
 import 'screens/home_screen.dart';
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const LoginScreen(),
+        '/vendor_login': (context) => const VendorLoginScreen(),
         '/otp': (context) => const OtpScreen(),
         '/setup_profile': (context) => const SetupProfileScreen(),
         '/home': (context) => const HomeScreen(),

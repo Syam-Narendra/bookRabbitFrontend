@@ -178,7 +178,17 @@ class _OtpScreenState extends State<OtpScreen> {
             if (value.isNotEmpty && index < 5) {
               _focusNodes[index + 1].requestFocus();
             } else if (value.isNotEmpty && index == 5) {
-              Navigator.pushNamed(context, '/setup_profile');
+              String enteredOtp = _controllers.map((c) => c.text).join();
+              if (enteredOtp == "123456") {
+                Navigator.pushNamed(context, '/setup_profile');
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Incorrect OTP. Please try 123456."),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
             } else if (value.isEmpty && index > 0) {
               _focusNodes[index - 1].requestFocus();
             }

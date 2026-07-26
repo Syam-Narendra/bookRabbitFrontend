@@ -14,6 +14,13 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
   bool _receiveNews = false;
   bool _acceptTerms = true;
   File? _imageFile;
+  final TextEditingController _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -126,7 +133,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                           ),
                           const SizedBox(height: 40),
                           _buildTextFieldLabel('FIRST NAME *'),
-                          _buildTextField(hintText: 'Enter your first name'),
+                          _buildTextField(hintText: 'Enter your first name', controller: _nameController),
                           const SizedBox(height: 24),
                           _buildCheckboxRow(
                             value: _acceptTerms,
@@ -159,6 +166,15 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
+                        if (_nameController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Please enter your first name."),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                          return;
+                        }
                         Navigator.pushNamed(context, '/home');
                       },
                       style: ElevatedButton.styleFrom(
@@ -237,7 +253,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
     );
   }
 
-  Widget _buildTextField({required String hintText}) {
+  Widget _buildTextField({required String hintText, TextEditingController? controller}) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -245,6 +261,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextField(
+        controller: controller,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,
