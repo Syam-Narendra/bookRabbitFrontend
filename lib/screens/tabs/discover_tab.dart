@@ -20,6 +20,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
   List<Map<String, dynamic>> allGrounds = [];
   bool isLoading = true;
   bool hasError = false;
+  Map<String, dynamic>? _selectedGround;
 
   static final List<Map<String, dynamic>> categoryData = [
     {'name': 'All', 'icon': Icons.auto_awesome},
@@ -66,51 +67,76 @@ class _DiscoverTabState extends State<DiscoverTab> {
       return matchesCategory && matchesSearch;
     }).toList();
 
-    return Column(
-      children: [
-        _buildHeader(),
-        _buildTopSearch(),
-        _buildChips(),
-        const SizedBox(height: 12),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.03),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+        );
+      },
+      child: _selectedGround != null
+          ? KeyedSubtree(
+              key: ValueKey(_selectedGround!['id']),
+              child: GroundDetailsScreen(
+                ground: _selectedGround!,
+                onBackPressed: () => setState(() => _selectedGround = null),
+              ),
+            )
+          : KeyedSubtree(
+              key: const ValueKey('discover_list'),
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  _buildTopSearch(),
+                  _buildChips(),
+                  const SizedBox(height: 12),
         Expanded(
-          child: isLoading 
-            ? GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 140.0),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
-                  childAspectRatio: 0.66,
-                ),
-                itemCount: 6,
-                itemBuilder: (context, index) {
-                  return Shimmer.fromColors(
-                    baseColor: const Color(0xFF2C2C2E),
-                    highlightColor: const Color(0xFF3A3A3C),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(height: 14, width: double.infinity, color: Colors.white),
-                        const SizedBox(height: 4),
-                        Container(height: 12, width: 80, color: Colors.white),
-                        const SizedBox(height: 4),
-                        Container(height: 12, width: 120, color: Colors.white),
-                      ],
-                    ),
-                  );
-                },
-              )
-            : hasError
-              ? Center(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = constraints.maxWidth >= 1100 ? 4 : constraints.maxWidth >= 720 ? 3 : 2;
+              final bottomPad = MediaQuery.of(context).size.width >= 720 ? 24.0 : 140.0;
+              final gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                crossAxisSpacing: 16.0,
+                mainAxisSpacing: 16.0,
+                childAspectRatio: 0.66,
+              );
+              if (isLoading) {
+                return GridView.builder(
+                  padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, bottomPad),
+                  gridDelegate: gridDelegate,
+                  itemCount: cols * 2,
+                  itemBuilder: (context, index) {
+                    return Shimmer.fromColors(
+                      baseColor: const Color(0xFF2C2C2E),
+                      highlightColor: const Color(0xFF3A3A3C),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)))),
+                          const SizedBox(height: 8),
+                          Container(height: 14, width: double.infinity, color: Colors.white),
+                          const SizedBox(height: 4),
+                          Container(height: 12, width: 80, color: Colors.white),
+                          const SizedBox(height: 4),
+                          Container(height: 12, width: 120, color: Colors.white),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }
+              if (hasError) {
+                return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -120,35 +146,31 @@ class _DiscoverTabState extends State<DiscoverTab> {
                         onPressed: _fetchGrounds,
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE54F3F)),
                         child: const Text('Retry', style: TextStyle(color: Colors.white)),
-                      )
+                      ),
                     ],
                   ),
-                )
-              : filteredGrounds.isEmpty 
-                ? const Center(
-                    child: Text(
-                      'No grounds found.',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 140.0),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16.0,
-                      mainAxisSpacing: 16.0,
-                      childAspectRatio: 0.66,
-                    ),
-                    itemCount: filteredGrounds.length,
-                    itemBuilder: (context, index) {
-                      return _buildGroundCard(context, filteredGrounds[index])
-                        .animate()
-                        .fade(duration: const Duration(milliseconds: 300), delay: Duration(milliseconds: index * 50))
-                        .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
-                    },
-                  ),
+                );
+              }
+              if (filteredGrounds.isEmpty) {
+                return const Center(child: Text('No grounds found.', style: TextStyle(color: Colors.white70, fontSize: 16)));
+              }
+              return GridView.builder(
+                padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, bottomPad),
+                gridDelegate: gridDelegate,
+                itemCount: filteredGrounds.length,
+                itemBuilder: (context, index) {
+                  return _buildGroundCard(context, filteredGrounds[index])
+                      .animate()
+                      .fade(duration: const Duration(milliseconds: 300), delay: Duration(milliseconds: index * 50))
+                      .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+                },
+              );
+            },
+          ),
         ),
       ],
+    ),
+    ),
     );
   }
 
@@ -316,12 +338,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
   Widget _buildGroundCard(BuildContext context, Map<String, dynamic> ground) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => GroundDetailsScreen(ground: ground),
-          ),
-        );
+        setState(() {
+          _selectedGround = ground;
+        });
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

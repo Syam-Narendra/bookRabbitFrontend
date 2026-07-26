@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/touchable_opacity.dart';
+
+import 'home_screen.dart';
+import 'booking_detail_screen.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
   final String? referenceId;
@@ -21,100 +26,547 @@ class BookingSuccessScreen extends StatelessWidget {
     required this.finalPrice,
   });
 
+  String _calculateDuration(String start, String end) {
+    try {
+      final format = DateFormat('hh:mm a');
+      final d1 = format.parse(start);
+      final d2 = format.parse(end);
+      final diff = d2.difference(d1);
+      final hours = diff.inHours;
+      if (hours > 0) return '$hours Hours';
+      return '${diff.inMinutes} Mins';
+    } catch (e) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF161616),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
+      backgroundColor: Colors.white,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 760;
+          if (isWide) {
+            final rabbitHeight = (constraints.maxHeight * 0.60).clamp(320.0, 640.0);
+            return Row(
+              children: [
+                // Left Panel — Soft Warm Cream & Peach hero banner with Mascot & Checkmark
+                Expanded(
+                  flex: 5,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFFFFF7F2), Color(0xFFFFEAE0)],
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: Stack(
+                        children: [
+                          // Dynamic Rabbit image starting EXACTLY at bottom edge
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Image.asset(
+                              'assets/images/rabbit-confirm-full.png',
+                              height: rabbitHeight,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.bottomCenter,
+                              errorBuilder: (context, error, stackTrace) => Image.asset(
+                                'assets/images/rabbit-confirm.png',
+                                height: rabbitHeight,
+                                fit: BoxFit.contain,
+                                alignment: Alignment.bottomCenter,
+                              ),
+                            ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+                          ),
+                          // Text and checkmark badge on top
+                          Padding(
+                            padding: const EdgeInsets.all(40.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 0)),
+                                      (route) => false,
+                                    );
+                                  },
+                                  child: const Icon(Icons.arrow_back, color: Color(0xFF1C1C1E), size: 28),
+                                ),
+                                const SizedBox(height: 24),
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFFFF5200).withValues(alpha: 0.15),
+                                              blurRadius: 20,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(Icons.check, color: Color(0xFFFF5200), size: 54),
+                                      ).animate().scale(delay: 200.ms, curve: Curves.elasticOut),
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        'Booking Confirmed!',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(color: Color(0xFF1C1C1E), fontSize: 36, fontWeight: FontWeight.bold, height: 1.2),
+                                      ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
+                                      const SizedBox(height: 12),
+                                      const Text(
+                                        'Your booking has been confirmed successfully.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(color: Color(0xFF666666), fontSize: 16, height: 1.4),
+                                      ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Right Panel — Receipt card details
+                Expanded(
+                  flex: 6,
+                  child: Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: _buildReceiptDetails(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // Mobile view: original Stack layout with Soft Warm Cream & Peach header
+          return Stack(
             children: [
-              const Spacer(),
               Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE54F3F).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle, color: Color(0xFFE54F3F), size: 64),
-              ).animate().fade(duration: 500.ms).scale(curve: Curves.elasticOut),
-              const SizedBox(height: 24),
-              const Text(
-                'Booking Confirmed',
-                style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
-              ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
-              const SizedBox(height: 8),
-              if (referenceId != null)
-                Text(
-                  'Reference ID: $referenceId',
-                  style: const TextStyle(color: Color(0xFF98989E), fontSize: 15, fontWeight: FontWeight.w600),
-                ).animate().fade(delay: 300.ms).slideY(begin: 0.1)
-              else
-                const Text(
-                  'Your payment was successful. Your booking will appear shortly.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF98989E), fontSize: 14),
-                ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
-              const SizedBox(height: 32),
-              Container(
+                height: 380,
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C1E),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF38383A)),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFFFF7F2), Color(0xFFFFEAE0)],
+                  ),
                 ),
+              ),
+              SafeArea(
+                bottom: false,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      ground['title']?.toString() ?? '',
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 0)),
+                                (route) => false,
+                              );
+                            },
+                            child: const Icon(Icons.arrow_back, color: Color(0xFF1C1C1E)),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      ground['location']?.toString() ?? '',
-                      style: const TextStyle(color: Color(0xFF98989E), fontSize: 14),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Image.asset(
+                            'assets/images/rabbit-confirm.png',
+                            width: 170,
+                            height: 230,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.bottomCenter,
+                          ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFFF5200).withValues(alpha: 0.15),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.check, color: Color(0xFFFF5200), size: 44),
+                                  ).animate().scale(delay: 200.ms, curve: Curves.elasticOut),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Booking\nConfirmed!',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Color(0xFF1C1C1E), fontSize: 24, fontWeight: FontWeight.bold, height: 1.2),
+                                  ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Your booking has been\nconfirmed successfully.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Color(0xFF666666), fontSize: 13, height: 1.3),
+                                  ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const Divider(color: Color(0xFF38383A), height: 24),
-                    _buildIconDetail(Icons.calendar_today, DateFormat('EEEE, MMM d, yyyy').format(date)),
-                    const SizedBox(height: 12),
-                    _buildIconDetail(Icons.access_time, '$startTime - $endTime'),
-                    const SizedBox(height: 12),
-                    _buildIconDetail(Icons.payments, 'Paid ₹$finalPrice'),
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+                        ),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(bottom: 32),
+                          child: _buildReceiptDetails(context),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
-              const Spacer(),
-              TouchableOpacity(
-                onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
-                child: Container(
-                  width: double.infinity,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE54F3F),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text('Done', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
+              ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildIconDetail(IconData icon, String text) {
-    return Row(
+  Widget _buildReceiptDetails(BuildContext context) {
+    return Column(
       children: [
-        Icon(icon, color: const Color(0xFFE54F3F), size: 18),
-        const SizedBox(width: 8),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+        // Booking ID
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFF2E6),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.calendar_today_outlined, color: Color(0xFFFF5200), size: 20),
+        ),
+        const SizedBox(height: 8),
+        const Text('BOOKING ID', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 12, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(
+          referenceId ?? 'BRB-PENDING',
+          style: const TextStyle(color: Color(0xFFFF5200), fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 24),
+        // Dashed Divider
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final dashWidth = 5.0;
+            final dashHeight = 1.0;
+            final dashCount = (constraints.maxWidth / (2 * dashWidth)).floor();
+            return Flex(
+              direction: Axis.horizontal,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(dashCount, (_) {
+                return SizedBox(
+                  width: dashWidth,
+                  height: dashHeight,
+                  child: const DecoratedBox(decoration: BoxDecoration(color: Color(0xFFE0E0E0))),
+                );
+              }),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+        // Ground Details
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                ground['imageUrl'] ?? 'https://via.placeholder.com/150',
+                width: 72,
+                height: 72,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(ground['title'] ?? '', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.location_on_outlined, color: Color(0xFFFF5200), size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(ground['location'] ?? '', style: const TextStyle(color: Color(0xFF8C8C8C), fontSize: 13))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        // Date & Time Box
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFAF2ED),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.calendar_today_outlined, color: Color(0xFFFF5200), size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('DATE', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 11, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(DateFormat('dd MMM yyyy').format(date), style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text(DateFormat('EEEE').format(date), style: const TextStyle(color: Color(0xFF8C8C8C), fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 40, color: const Color(0xFFE5D5C5)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.access_time, color: Color(0xFFFF5200), size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('TIME', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 11, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('$startTime – $endTime', style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold), maxLines: 2),
+                          const SizedBox(height: 2),
+                          Text(_calculateDuration(startTime, endTime), style: const TextStyle(color: Color(0xFF8C8C8C), fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Payment Status Box
+        GestureDetector(
+          onTap: () {
+            final bookingMap = {
+              'status': 'Upcoming',
+              'images': [ground['imageUrl'] ?? 'https://via.placeholder.com/800'],
+              'title': ground['title'] ?? '',
+              'type': 'Sports',
+              'address': ground['location'] ?? '',
+              'date': DateFormat('dd MMM yyyy').format(date),
+              'time': '$startTime – $endTime',
+              'referenceId': referenceId,
+              'fare': finalPrice - 20,
+              'platformFee': 20,
+              'totalAmount': finalPrice,
+            };
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingDetailScreen(booking: bookingMap),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFF2E6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFFFF5200), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text('Payment Status', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 12)),
+                      Text('Paid Successfully', style: TextStyle(color: Color(0xFF00A859), fontSize: 14, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                Text('₹$finalPrice', style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right, color: Color(0xFF8C8C8C)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // WhatsApp Box
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFAF2ED),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Image.asset('assets/images/whatsapp.png', width: 24, height: 24, errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat_bubble_outline, color: Color(0xFFFF5200), size: 24)),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'A confirmation has been sent to your WhatsApp with booking details.',
+                  style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Buttons
+        TouchableOpacity(
+          onTap: () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 1)),
+              (route) => false,
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF5200),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.calendar_month_outlined, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('View My Bookings', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TouchableOpacity(
+          onTap: () {
+            final String details = 'Booking Confirmed!\n\n'
+                'Ground: ${ground['title'] ?? 'N/A'}\n'
+                'Location: ${ground['location'] ?? 'N/A'}\n'
+                'Date: ${DateFormat('dd MMM yyyy').format(date)}\n'
+                'Time: $startTime – $endTime\n'
+                'Booking ID: ${referenceId ?? 'BRB-PENDING'}\n'
+                'Amount Paid: ₹$finalPrice';
+            Share.share(details, subject: 'My Booking Details');
+          },
+          child: Container(
+            width: double.infinity,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFF5200)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.share_outlined, color: Color(0xFFFF5200), size: 20),
+                SizedBox(width: 8),
+                Text('Share Booking Details', style: TextStyle(color: Color(0xFFFF5200), fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Support text
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.verified_user_outlined, color: Color(0xFFFF5200), size: 16),
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: () async {
+                final Uri supportUri = Uri.parse('https://bookrabbit.com/support');
+                if (await canLaunchUrl(supportUri)) {
+                  await launchUrl(supportUri);
+                }
+              },
+              child: RichText(
+                text: const TextSpan(
+                  style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 13),
+                  children: [
+                    TextSpan(text: 'Need help? '),
+                    TextSpan(text: 'Contact support', style: TextStyle(color: Color(0xFFFF5200), fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
-    );
+    ).animate().fade(delay: 500.ms).slideY(begin: 0.1);
   }
 }

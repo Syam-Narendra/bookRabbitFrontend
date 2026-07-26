@@ -6,61 +6,131 @@ import 'tabs/history_tab.dart';
 import 'tabs/account_tab.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialIndex;
+  const HomeScreen({super.key, this.initialIndex = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
+
+  Widget _buildTabContent() {
+    Widget tabWidget;
+    switch (_currentIndex) {
+      case 0:
+        tabWidget = DiscoverTab(
+          key: const ValueKey('tab_discover'),
+          onProfileTapped: () => setState(() => _currentIndex = 2),
+        );
+        break;
+      case 1:
+        tabWidget = const HistoryTab(key: ValueKey('tab_history'));
+        break;
+      default:
+        tabWidget = const AccountTab(key: ValueKey('tab_account'));
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.02),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+        );
+      },
+      child: tabWidget,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 600;
+    final isWide = MediaQuery.of(context).size.width >= 720;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212), // Dark background color from main.dart
-      resizeToAvoidBottomInset: false, // Prevents app from shrinking when keyboard opens
-      body: Center(
-        child: Container(
-          width: isDesktop ? 450 : double.infinity,
-          height: double.infinity,
-          color: const Color(0xFF161616), // Inner app background
-          child: SafeArea(
-            bottom: false,
-            child: Stack(
-              children: [
-            // Using IndexedStack preserves state of tabs (e.g. search query)
-            IndexedStack(
-              index: _currentIndex,
-              children: [
-                DiscoverTab(
-                  onProfileTapped: () {
-                    setState(() {
-                      _currentIndex = 2; // Switch to AccountTab
-                    });
-                  },
+    if (isWide) {
+      // Wide: persistent side rail + content
+      return Scaffold(
+        backgroundColor: const Color(0xFF161616),
+        body: Container(
+          color: const Color(0xFF161616),
+          child: Row(
+            children: [
+              // Side navigation rail matching exact mobile colors
+              NavigationRail(
+                backgroundColor: const Color(0xFF161616),
+                useIndicator: false,
+                indicatorColor: Colors.transparent,
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (i) => setState(() => _currentIndex = i),
+                labelType: NavigationRailLabelType.all,
+                selectedIconTheme: const IconThemeData(color: Color(0xFFE54F3F), size: 26),
+                unselectedIconTheme: const IconThemeData(color: Color(0xFF98989E), size: 24),
+                selectedLabelTextStyle: const TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold, fontSize: 12),
+                unselectedLabelTextStyle: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.book_outlined),
+                    selectedIcon: Icon(Icons.book),
+                    label: Text('Discover'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.history),
+                    selectedIcon: Icon(Icons.history),
+                    label: Text('History'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: Text('Account'),
+                  ),
+                ],
+              ),
+              const VerticalDivider(width: 1, color: Color(0xFF2C2C2E)),
+              // Main content
+              Expanded(
+                child: SafeArea(
+                  child: _buildTabContent(),
                 ),
-                const HistoryTab(),
-                const AccountTab(),
-              ],
-            ),
-            
-
-            
-            // Bottom Gradient and Navigation
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _buildBottomOverlay(),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    }
+
+    // Narrow: original bottom nav
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      resizeToAvoidBottomInset: false,
+      body: Container(
+        color: const Color(0xFF161616),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              _buildTabContent(),
+              Positioned(
+                left: 0, right: 0, bottom: 0,
+                child: _buildBottomOverlay(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -85,57 +155,39 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Bottom Navigation Bar
               Theme(
-                data: ThemeData(
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
-                ),
+                data: ThemeData(splashColor: Colors.transparent, highlightColor: Colors.transparent),
                 child: BottomNavigationBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  selectedItemColor: const Color(0xFFE54F3F), // Red color
+                  selectedItemColor: const Color(0xFFE54F3F),
                   unselectedItemColor: const Color(0xFF98989E),
                   currentIndex: _currentIndex,
-                  onTap: (index) {
-                    setState(() {
-                      _currentIndex = index;
-                    });
-                  },
+                  onTap: (index) => setState(() => _currentIndex = index),
                   type: BottomNavigationBarType.fixed,
                   selectedFontSize: 12,
                   unselectedFontSize: 12,
                   items: const [
                     BottomNavigationBarItem(
-                      icon: Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Icon(Icons.book_outlined),
-                      ),
+                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.book_outlined)),
                       label: 'Discover',
                     ),
                     BottomNavigationBarItem(
-                      icon: Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Icon(Icons.history),
-                      ),
+                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.history)),
                       label: 'History',
                     ),
                     BottomNavigationBarItem(
-                      icon: Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Icon(Icons.person_outline),
-                      ),
+                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.person_outline)),
                       label: 'Account',
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 34), // Add some bottom padding for the home indicator
+              const SizedBox(height: 34),
             ],
           ),
         ),
       ),
     );
   }
-
 }

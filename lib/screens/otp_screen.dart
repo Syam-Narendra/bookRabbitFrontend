@@ -6,7 +6,6 @@ import '../services/api_client.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
-
   const OtpScreen({super.key, required this.phone});
 
   @override
@@ -14,186 +13,160 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isVerifying = false;
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    for (var focusNode in _focusNodes) {
-      focusNode.dispose();
-    }
+    for (var c in _controllers) c.dispose();
+    for (var f in _focusNodes) f.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 600;
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF2C3232),
-              Color(0xFF1B1B1B),
-              Color(0xFF1A1A1A),
-            ],
+            colors: [Color(0xFFFFF7F2), Color(0xFFFFEAE0)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: Container(
-              width: isDesktop ? 450 : double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
+          child: LayoutBuilder(builder: (context, constraints) {
+            return Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 480),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
                       alignment: Alignment.centerLeft,
-                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 24),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ).animate().fade().slideX(begin: -0.2),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Enter the code we sent to your mobile number\n+91 ${widget.phone}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      height: 1.4,
-                    ),
-                  ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
-                  const SizedBox(height: 32),
-                  Text(
-                    'VERIFICATION CODE',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                    ),
-                  ).animate().fade(delay: 150.ms).slideY(begin: 0.1),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildCodeBox(0),
-                      _buildCodeBox(1),
-                      _buildCodeBox(2),
-                      const Text(
-                        '-',
-                        style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                      ).animate().fade(delay: 200.ms),
-                      _buildCodeBox(3),
-                      _buildCodeBox(4),
-                      _buildCodeBox(5),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  GestureDetector(
-                    onTap: () {},
-                    child: const Text(
-                      'Need help?',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: const Padding(
+                          padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
+                          child: Icon(Icons.arrow_back, color: Color(0xFF1C1C1E), size: 26),
+                        ),
                       ),
-                    ),
-                  ).animate().fade(delay: 400.ms),
-                  const Spacer(),
-                  // Footer
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF4B3A),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'B',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                    ).animate().fade().slideX(begin: -0.2),
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Enter OTP', style: TextStyle(color: Color(0xFF1C1C1E), fontSize: 32, fontWeight: FontWeight.bold))
+                                  .animate().fade(delay: 100.ms).slideY(begin: 0.1),
+                              const SizedBox(height: 8),
+                              Text('Sent to +91 ${widget.phone}', style: const TextStyle(color: Color(0xFF666666), fontSize: 16))
+                                  .animate().fade(delay: 150.ms),
+                              const SizedBox(height: 40),
+                              Row(
+                                children: [
+                                  for (int i = 0; i < 6; i++) ...[
+                                    if (i > 0) const SizedBox(width: 8),
+                                    Expanded(child: _buildCodeBox(i)),
+                                  ],
+                                ],
                               ),
+                              const SizedBox(height: 40),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed: _isVerifying ? null : _verify,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF5200),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: _isVerifying
+                                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                                      : const Text('Verify OTP', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                                ),
+                              ).animate().fade(delay: 400.ms),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12, bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(color: const Color(0xFFFF5200), borderRadius: BorderRadius.circular(4)),
+                              child: const Text('B', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Book Rabbit',
-                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
+                            const SizedBox(width: 6),
+                            const Text('Book Rabbit', style: TextStyle(color: Color(0xFF666666), fontSize: 13, fontWeight: FontWeight.w600)),
+                          ]),
+                          const Text('A Rabbit product', style: TextStyle(color: Color(0xFF999999), fontSize: 12)),
                         ],
-                      ),
-                      Text(
-                        'A Rabbit product',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                      ),
-                    ],
-                  ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
-                  const SizedBox(height: 20),
-                ],
+                      ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          }),
         ),
       ),
     );
   }
 
-  Future<void> _submitOtp() async {
-    final enteredOtp = _controllers.map((c) => c.text).join();
+  Future<void> _verify() async {
+    final otp = _controllers.map((c) => c.text).join();
+    if (otp.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter the 6-digit OTP.'), backgroundColor: Colors.redAccent));
+      return;
+    }
     setState(() => _isVerifying = true);
     try {
-      final user = await AuthService.verifyOtp(widget.phone, enteredOtp);
+      final user = await AuthService.verifyOtp(widget.phone, otp);
       if (!mounted) return;
       if (user.fullName == null || user.fullName!.trim().isEmpty) {
-        Navigator.pushNamed(context, '/setup_profile');
+        Navigator.pushNamedAndRemoveUntil(context, '/setup_profile', (route) => false);
       } else {
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       }
     } on ApiException catch (e) {
       if (!mounted) return;
-      for (final c in _controllers) {
-        c.clear();
-      }
+      for (final c in _controllers) c.clear();
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent));
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
   }
 
   Widget _buildCodeBox(int index) {
+    final hasText = _controllers[index].text.isNotEmpty;
     Widget box = Container(
-      width: 48,
       height: 56,
       decoration: BoxDecoration(
-        color: const Color(0xFF333333),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasText ? const Color(0xFFFF5200) : const Color(0xFFE0E0E0),
+          width: hasText ? 2.0 : 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF5200).withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Center(
         child: TextField(
@@ -202,35 +175,24 @@ class _OtpScreenState extends State<OtpScreen> {
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           maxLength: 1,
-          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Color(0xFF1C1C1E), fontSize: 24, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
-            counterText: "",
+            counterText: '',
             border: InputBorder.none,
             hintText: '•',
-            hintStyle: TextStyle(color: Colors.grey[600], fontSize: 24),
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 24),
           ),
-          enabled: !_isVerifying,
           onChanged: (value) {
-            if (value.isNotEmpty && index < 5) {
-              _focusNodes[index + 1].requestFocus();
-            } else if (value.isNotEmpty && index == 5) {
-              _submitOtp();
-            } else if (value.isEmpty && index > 0) {
-              _focusNodes[index - 1].requestFocus();
-            }
+            setState(() {});
+            if (value.isNotEmpty && index < 5) _focusNodes[index + 1].requestFocus();
+            if (value.isEmpty && index > 0) _focusNodes[index - 1].requestFocus();
           },
         ),
       ),
     );
-
     if (_isVerifying) {
-      box = Shimmer.fromColors(
-        baseColor: const Color(0xFF333333),
-        highlightColor: const Color(0xFF4A4A4A),
-        child: box,
-      );
+      box = Shimmer.fromColors(baseColor: const Color(0xFFE0E0E0), highlightColor: Colors.white, child: box);
     }
-
     return box.animate().fade(delay: Duration(milliseconds: 200 + (index * 50))).slideY(begin: 0.1);
   }
 }

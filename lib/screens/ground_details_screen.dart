@@ -8,10 +8,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'review_booking_screen.dart';
 import '../services/ground_service.dart';
 
+
 class GroundDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
+  final VoidCallback? onBackPressed;
 
-  const GroundDetailsScreen({super.key, required this.ground});
+  const GroundDetailsScreen({super.key, required this.ground, this.onBackPressed});
 
   @override
   State<GroundDetailsScreen> createState() => _GroundDetailsScreenState();
@@ -195,46 +197,175 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     }
   }
 
-  int get _totalPrice {
-    if (_selectedStartTime == null) return 0;
-    double slotPrice = _basePrice / 2;
-    int slots = _durationMins ~/ 30;
-    return (slotPrice * slots).round();
+
+
+  Widget _buildImageWidget({double height = 280.0}) {
+    return Hero(
+      tag: 'ground_image_${widget.ground['id'] ?? widget.ground['title']}',
+      child: Builder(
+        builder: (context) {
+          final images = widget.ground['images'] as List<dynamic>? ?? [];
+          if (images.isEmpty) {
+            final fallbackUrl = widget.ground['imageUrl'] ?? 'assets/images/sports_bunnies.png';
+            if (fallbackUrl.toString().startsWith('http')) {
+              return Image.network(
+                fallbackUrl,
+                height: height,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              );
+            } else {
+              return Image.asset(
+                fallbackUrl,
+                height: height,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              );
+            }
+          }
+          return CarouselSlider(
+            options: CarouselOptions(
+              height: height,
+              viewportFraction: 1.0,
+              autoPlay: images.length > 1,
+              autoPlayInterval: const Duration(seconds: 4),
+            ),
+            items: images.map((url) {
+              return Image.network(
+                url as String,
+                fit: BoxFit.cover,
+                width: double.infinity,
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  void _handleBack() {
+    if (widget.onBackPressed != null) {
+      widget.onBackPressed!();
+    } else {
+      Navigator.maybePop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 600;
-
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      body: Center(
-        child: Container(
-          width: isDesktop ? 450 : double.infinity,
-          height: double.infinity,
-          color: const Color(0xFF161616),
-          child: CustomScrollView(
-            slivers: [
-              _buildSliverAppBar(),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTitleAndDetails(),
-                      const SizedBox(height: 32),
-                      _buildDateSelector(),
-                      const SizedBox(height: 32),
-                      _buildTimeSlotsSection(),
-                      const SizedBox(height: 40),
-                    ],
+      backgroundColor: const Color(0xFF161616),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 720;
+
+            if (isWide) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left 50%: Images & Address/Details
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                                onPressed: _handleBack,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  widget.ground['title'] ?? 'Ground Details',
+                                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: _buildImageWidget(height: 320),
+                                ),
+                                const SizedBox(height: 24),
+                                _buildTitleAndDetails(),
+                                const SizedBox(height: 32),
+                                _buildDateSelector(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const VerticalDivider(width: 1, color: Color(0xFF2C2C2E)),
+                  // Right 50%: Only Time Slots & Booking (Vertically Centered)
+                  Expanded(
+                    flex: 1,
+                    child: LayoutBuilder(
+                      builder: (context, rightConstraints) {
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 32),
+                          child: Center(
+                            child: Container(
+                              constraints: BoxConstraints(
+                                minHeight: (rightConstraints.maxHeight - 64).clamp(0.0, double.infinity),
+                                maxWidth: 640,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildTimeSlotsSection(),
+                                  const SizedBox(height: 40),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            // Mobile view: original CustomScrollView layout
+            return CustomScrollView(
+              slivers: [
+                _buildSliverAppBar(),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTitleAndDetails(),
+                        const SizedBox(height: 32),
+                        _buildDateSelector(),
+                        const SizedBox(height: 32),
+                        _buildTimeSlotsSection(),
+                        SizedBox(height: isWide ? 40 : 140),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -251,7 +382,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           backgroundColor: Colors.black54,
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-            onPressed: () => Navigator.pop(context),
+            onPressed: _handleBack,
           ),
         ),
       ),
@@ -259,43 +390,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Hero(
-              tag: 'ground_image_${widget.ground['id'] ?? widget.ground['title']}',
-              child: Builder(
-                builder: (context) {
-                  final images = widget.ground['images'] as List<dynamic>? ?? [];
-                  if (images.isEmpty) {
-                    final fallbackUrl = widget.ground['imageUrl'] ?? 'assets/images/sports_bunnies.png';
-                    if (fallbackUrl.toString().startsWith('http')) {
-                      return Image.network(
-                        fallbackUrl,
-                        fit: BoxFit.cover,
-                      );
-                    } else {
-                      return Image.asset(
-                        fallbackUrl,
-                        fit: BoxFit.cover,
-                      );
-                    }
-                  }
-                  return CarouselSlider(
-                    options: CarouselOptions(
-                      height: 280.0,
-                      viewportFraction: 1.0,
-                      autoPlay: images.length > 1,
-                      autoPlayInterval: const Duration(seconds: 4),
-                    ),
-                    items: images.map((url) {
-                      return Image.network(
-                        url as String,
-                        fit: BoxFit.cover,
-                        width: MediaQuery.of(context).size.width,
-                      );
-                    }).toList(),
-                  );
-                }
-              ),
-            ),
+            _buildImageWidget(height: 280.0),
             // Gradient overlay for readability
             Positioned(
               bottom: 0,
@@ -365,7 +460,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                '${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']} • ${widget.ground['type']}',
+                '${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']}',
                 style: const TextStyle(color: Color(0xFF98989E), fontSize: 14),
               ),
             ),
@@ -648,23 +743,13 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            const Text(
-              'Select Date',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Spacer(),
-            const Text(
-              '* Bookings Open for Next 15 days only',
-              style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontStyle: FontStyle.italic),
-            ),
-          ],
+        const Text(
+          'Select Date',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -713,7 +798,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         date.day.toString(),
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -733,6 +818,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               );
             },
           ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          '* Bookings Open for Next 15 days only',
+          style: TextStyle(color: Color(0xFF98989E), fontSize: 12, fontStyle: FontStyle.italic),
         ),
       ],
     );
@@ -793,9 +883,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
           itemCount: _timeSlots.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 2.5,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 130,
+            mainAxisExtent: 44,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
@@ -823,25 +913,33 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
             Color bgColor;
             Color textColor;
+            Color borderColor;
             String? badge;
             if (isSelected) {
-              bgColor = const Color(0xFFE54F3F);
+              bgColor = const Color(0xFFFF5200);
               textColor = Colors.white;
+              borderColor = const Color(0xFFFF5200);
             } else if (isPast) {
-              bgColor = const Color(0xFF232323);
-              textColor = const Color(0xFF6B6B6B);
+              bgColor = const Color(0xFF18181B);
+              textColor = const Color(0xFF52525B);
+              borderColor = const Color(0xFF27272A);
               badge = 'Past';
             } else if (isBooked) {
-              bgColor = const Color(0xFF3A1F1F);
+              // Muted Dark Wine / Burgundy for Booked slots
+              bgColor = const Color(0xFF2D1E22);
               textColor = const Color(0xFFE57373);
+              borderColor = const Color(0xFF4A252C);
               badge = 'Booked';
             } else if (isHeld) {
-              bgColor = const Color(0xFF3A2F17);
-              textColor = const Color(0xFFE6A23C);
+              bgColor = const Color(0xFF221A0F);
+              textColor = const Color(0xFFF59E0B);
+              borderColor = const Color(0xFF453015);
               badge = '⏳ Held';
             } else {
-              bgColor = const Color(0xFF2C2C2E);
-              textColor = const Color(0xFF98989E);
+              // Available: Clean dark card with crisp white text
+              bgColor = const Color(0xFF27272A);
+              textColor = Colors.white;
+              borderColor = const Color(0xFF3F3F46);
             }
 
             return GestureDetector(
@@ -854,6 +952,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderColor, width: 1.2),
                 ),
                 alignment: Alignment.center,
                 child: Column(
@@ -864,15 +963,15 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       style: TextStyle(
                         color: textColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                     ),
                     if (badge != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                        padding: const EdgeInsets.only(top: 1),
                         child: Text(
                           badge,
-                          style: TextStyle(color: textColor, fontSize: 10),
+                          style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.w600),
                         ),
                       ),
                   ],
@@ -904,14 +1003,14 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   Widget _buildSlotLegend() {
     final items = [
-      (const Color(0xFF2C2C2E), 'Available'),
-      (const Color(0xFFE54F3F), 'Selected'),
-      (const Color(0xFF3A1F1F), 'Booked'),
-      (const Color(0xFF3A2F17), 'Held'),
-      (const Color(0xFF232323), 'Past'),
+      (const Color(0xFF27272A), Colors.white, const Color(0xFF3F3F46), 'Available'),
+      (const Color(0xFFFF5200), Colors.white, const Color(0xFFFF5200), 'Selected'),
+      (const Color(0xFF2D1E22), const Color(0xFFE57373), const Color(0xFF4A252C), 'Booked'),
+      (const Color(0xFF221A0F), const Color(0xFFF59E0B), const Color(0xFF453015), 'Held'),
+      (const Color(0xFF18181B), const Color(0xFF52525B), const Color(0xFF27272A), 'Past'),
     ];
     return Wrap(
-      spacing: 16,
+      spacing: 14,
       runSpacing: 8,
       children: items.map((item) {
         return Row(
@@ -923,10 +1022,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               decoration: BoxDecoration(
                 color: item.$1,
                 borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: item.$3, width: 1.2),
               ),
             ),
             const SizedBox(width: 6),
-            Text(item.$2, style: const TextStyle(color: Color(0xFF98989E), fontSize: 12)),
+            Text(item.$4, style: TextStyle(color: item.$2, fontSize: 12, fontWeight: FontWeight.w600)),
           ],
         );
       }).toList(),

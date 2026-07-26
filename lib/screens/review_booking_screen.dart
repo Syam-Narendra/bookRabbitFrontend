@@ -9,6 +9,7 @@ import '../services/booking_service.dart';
 import '../widgets/touchable_opacity.dart';
 import 'booking_success_screen.dart';
 
+
 class ReviewBookingScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
   final DateTime date;
@@ -164,57 +165,70 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
         elevation: 0,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Booking Summary', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))
-                  .animate().fade(duration: 300.ms).slideY(begin: 0.1),
-              const SizedBox(height: 24),
-              _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
-              const SizedBox(height: 24),
-              const Text('Payment Details', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))
-                  .animate().fade(delay: 200.ms).slideY(begin: 0.1),
-              const SizedBox(height: 16),
-              _buildPaymentCard().animate().fade(delay: 300.ms).slideY(begin: 0.1),
-              const Spacer(),
-              const Center(
-                child: Text.rich(
-                  TextSpan(
-                    text: 'Secured by ',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 720;
+            return Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWide ? 32.0 : 24.0,
+                  vertical: 24.0,
+                ),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextSpan(
-                        text: 'Razorpay',
-                        style: TextStyle(color: Color(0xFF3395FF), fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
+                      const Text('Booking Summary', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))
+                          .animate().fade(duration: 300.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 24),
+                      _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 24),
+                      const Text('Payment Details', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))
+                          .animate().fade(delay: 200.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 16),
+                      _buildPaymentCard().animate().fade(delay: 300.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 32),
+                      const Center(
+                        child: Text.rich(
+                          TextSpan(
+                            text: 'Secured by ',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                            children: [
+                              TextSpan(
+                                text: 'Razorpay',
+                                style: TextStyle(color: Color(0xFF3395FF), fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ).animate().fade(delay: 400.ms),
+                      const SizedBox(height: 12),
+                      TouchableOpacity(
+                        onTap: _isCreatingOrder ? null : _startPayment,
+                        child: Container(
+                          width: double.infinity,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE54F3F),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: _isCreatingOrder
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                )
+                              : Text('Pay ₹${widget.finalPrice}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
+                      ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                     ],
                   ),
                 ),
-              ).animate().fade(delay: 400.ms),
-              const SizedBox(height: 12),
-              TouchableOpacity(
-                onTap: _isCreatingOrder ? null : _startPayment,
-                child: Container(
-                  width: double.infinity,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE54F3F),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: _isCreatingOrder
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                        )
-                      : Text('Pay ₹${widget.finalPrice}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -233,7 +247,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
         children: [
           Text(widget.ground['title'], style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(widget.ground['location'] + ' • ' + widget.ground['type'], style: const TextStyle(color: Color(0xFF98989E), fontSize: 14)),
+          Text('${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']}', style: const TextStyle(color: Color(0xFF98989E), fontSize: 14)),
           const Divider(color: Color(0xFF38383A), height: 24),
           _buildIconDetail(Icons.calendar_today, DateFormat('EEEE, MMM d, yyyy').format(widget.date)),
           const SizedBox(height: 12),

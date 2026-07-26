@@ -19,6 +19,8 @@ class _HistoryTabState extends State<HistoryTab> {
   bool _isLoading = true;
   bool _hasError = false;
 
+  Map<String, dynamic>? _selectedBooking;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +48,13 @@ class _HistoryTabState extends State<HistoryTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (_selectedBooking != null) {
+      return BookingDetailScreen(
+        booking: _selectedBooking!,
+        onBackPressed: () => setState(() => _selectedBooking = null),
+      );
+    }
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFFE54F3F)));
     }
@@ -73,101 +82,115 @@ class _HistoryTabState extends State<HistoryTab> {
       displayedBookings = mockBookings.where((b) => b['status'] == _selectedHistoryTab).toList();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'History',
-                style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-              ).animate().fade(duration: 300.ms).slideX(begin: -0.1, end: 0, curve: Curves.easeOut),
-              
-            ],
-          ),
-        ),
-        
-        // Custom Tabs
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            children: historyTabs.map((tab) {
-              final isSelected = tab == _selectedHistoryTab;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedHistoryTab = tab;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  margin: const EdgeInsets.only(right: 24),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: isSelected ? const Color(0xFFE54F3F) : Colors.transparent,
-                        width: 2,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 720;
+        final bottomPad = isWide ? 40.0 : 140.0;
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 860),
+            padding: EdgeInsets.symmetric(horizontal: isWide ? 24.0 : 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: const Text(
+                    'History',
+                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                  ).animate().fade(duration: 350.ms).slideX(begin: -0.05, end: 0, curve: Curves.easeOutCubic),
+                ),
+                
+                // Custom Tabs
+                Row(
+                  children: historyTabs.map((tab) {
+                    final isSelected = tab == _selectedHistoryTab;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedHistoryTab = tab;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        margin: const EdgeInsets.only(right: 24),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isSelected ? const Color(0xFFE54F3F) : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          tab,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : const Color(0xFF98989E),
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  child: Text(
-                    tab,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF98989E),
-                      fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    ),
-                  ),
+                    );
+                  }).toList(),
+                ).animate().fade(delay: 100.ms, duration: 350.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic),
+                const SizedBox(height: 16),
+                
+                // Content List
+                Expanded(
+                  child: displayedBookings.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.calendar_today_outlined, color: Color(0xFF52525B), size: 48),
+                            const SizedBox(height: 16),
+                            Text(
+                              _selectedHistoryTab == 'All'
+                                  ? 'No bookings found.'
+                                  : 'No ${_selectedHistoryTab.toLowerCase()} bookings found.',
+                              style: const TextStyle(color: Color(0xFF98989E), fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView(
+                        padding: EdgeInsets.only(bottom: bottomPad),
+                        children: _selectedHistoryTab == 'All'
+                          ? [
+                              if (mockBookings.any((b) => b['status'] == 'Upcoming')) ...[
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                                  child: Text('Upcoming bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                ).animate().fade(delay: 150.ms),
+                                ...mockBookings.where((b) => b['status'] == 'Upcoming').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
+                              ],
+                              if (mockBookings.any((b) => b['status'] == 'Completed')) ...[
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                                  child: Text('Completed bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                ).animate().fade(delay: 150.ms),
+                                ...mockBookings.where((b) => b['status'] == 'Completed').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
+                              ],
+                              if (mockBookings.any((b) => b['status'] == 'Cancelled')) ...[
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                                  child: Text('Cancelled bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                ).animate().fade(delay: 150.ms),
+                                ...mockBookings.where((b) => b['status'] == 'Cancelled').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
+                              ],
+                            ]
+                          : displayedBookings.asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)).toList(),
+                      ),
                 ),
-              );
-            }).toList(),
+              ],
+            ),
           ),
-        ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
-        const SizedBox(height: 16),
-        
-        // Content List
-        Expanded(
-          child: mockBookings.isEmpty
-            ? const Center(
-                child: Text(
-                  'No bookings yet.',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              )
-            : ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
-            children: _selectedHistoryTab == 'All'
-              ? [
-                  if (mockBookings.any((b) => b['status'] == 'Upcoming')) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('Upcoming bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                    ).animate().fade(delay: 150.ms),
-                    ...mockBookings.where((b) => b['status'] == 'Upcoming').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
-                  ],
-                  if (mockBookings.any((b) => b['status'] == 'Completed')) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('Completed bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                    ).animate().fade(delay: 150.ms),
-                    ...mockBookings.where((b) => b['status'] == 'Completed').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
-                  ],
-                  if (mockBookings.any((b) => b['status'] == 'Cancelled')) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('Cancelled bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                    ).animate().fade(delay: 150.ms),
-                    ...mockBookings.where((b) => b['status'] == 'Cancelled').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
-                  ],
-                ]
-              : displayedBookings.asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)).toList(),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -187,12 +210,9 @@ class _HistoryTabState extends State<HistoryTab> {
 
     return TouchableOpacity(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BookingDetailScreen(booking: booking),
-          ),
-        );
+        setState(() {
+          _selectedBooking = booking;
+        });
       },
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),

@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../widgets/touchable_opacity.dart';
 
+
 class SetupProfileScreen extends StatefulWidget {
   const SetupProfileScreen({super.key});
 
@@ -14,8 +15,6 @@ class SetupProfileScreen extends StatefulWidget {
 }
 
 class _SetupProfileScreenState extends State<SetupProfileScreen> {
-  bool _obscurePassword = true;
-  final bool _receiveNews = false;
   bool _acceptTerms = true;
   bool _isSubmitting = false;
   File? _imageFile;
@@ -40,9 +39,6 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 600;
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -59,7 +55,8 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
         child: SafeArea(
           child: Center(
             child: Container(
-              width: isDesktop ? 450 : double.infinity,
+              constraints: const BoxConstraints(maxWidth: 540),
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 children: [
@@ -306,34 +303,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
     );
   }
 
-  Widget _buildPasswordField() {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: const Color(0xFF333333),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        obscureText: _obscurePassword,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey[500],
-            ),
-            onPressed: () {
-              setState(() {
-                _obscurePassword = !_obscurePassword;
-              });
-            },
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildCheckboxRow({
     required bool value,
