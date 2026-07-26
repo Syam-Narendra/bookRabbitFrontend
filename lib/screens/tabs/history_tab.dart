@@ -70,7 +70,6 @@ class _HistoryTabState extends State<HistoryTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 90), // Padding for the glossy top bar
         // Header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),

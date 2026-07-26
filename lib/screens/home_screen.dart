@@ -22,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212), // Dark background color from main.dart
+      resizeToAvoidBottomInset: false, // Prevents app from shrinking when keyboard opens
       body: Center(
         child: Container(
           width: isDesktop ? 450 : double.infinity,

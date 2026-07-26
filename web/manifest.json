@@ -3,7 +3,7 @@
     "short_name": "Book Rabbit",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
+    "background_color": "#E54F3F",
     "theme_color": "#0175C2",
     "description": "Book Rabbit lets you instantly book your favourite sports grounds.",
     "orientation": "portrait-primary",

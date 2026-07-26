@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:intl/intl.dart';
 import '../constants.dart';
 
 class ReviewBookingScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
+  final DateTime date;
   final String startTime;
   final String endTime;
   final String durationStr;
@@ -14,6 +16,7 @@ class ReviewBookingScreen extends StatefulWidget {
   const ReviewBookingScreen({
     Key? key,
     required this.ground,
+    required this.date,
     required this.startTime,
     required this.endTime,
     required this.durationStr,
@@ -154,7 +157,9 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
           Text(widget.ground['title'], style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(widget.ground['location'] + ' • ' + widget.ground['type'], style: const TextStyle(color: Color(0xFF98989E), fontSize: 14)),
-          const Divider(color: Color(0xFF38383A), height: 32),
+          const Divider(color: Color(0xFF38383A), height: 24),
+          _buildIconDetail(Icons.calendar_today, DateFormat('EEEE, MMM d, yyyy').format(widget.date)),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

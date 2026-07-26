@@ -139,7 +139,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 50, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

@@ -39,10 +39,15 @@ dependencies:
   http: ^1.6.0
   carousel_slider: ^5.1.2
   razorpay_flutter: ^1.4.5
+  url_launcher: ^6.3.2
+  share_plus: ^13.3.0
+  intl: ^0.20.3
+  table_calendar: ^3.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -50,6 +55,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -91,3 +97,22 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/sports_bunnies.png"
+  web:
+    generate: true
+    image_path: "assets/images/sports_bunnies.png"
+    background_color: "#E54F3F"
+  macos:
+    generate: true
+    image_path: "assets/images/sports_bunnies.png"
+
+flutter_native_splash:
+  color: "#E54F3F"
+  image: assets/images/sports_bunnies.png
+  android: true
+  ios: true
+  web: false

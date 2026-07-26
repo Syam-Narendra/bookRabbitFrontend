@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'review_booking_screen.dart';
 
@@ -15,6 +16,7 @@ class GroundDetailsScreen extends StatefulWidget {
 class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   final List<String> _timeSlots = [];
   String? _selectedStartTime;
+  DateTime? _selectedDate;
   int _durationMins = 60;
   int _basePrice = 0;
 
@@ -166,6 +168,8 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildTitleAndDetails(),
+                      const SizedBox(height: 32),
+                      _buildDateSelector(),
                       const SizedBox(height: 32),
                       _buildTimeSlotsSection(),
                       const SizedBox(height: 40),
@@ -512,7 +516,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                                   children: [
                                     _buildCardPill('FROM', slot),
                                     _buildCardPill('TO', _calculateEndTime(slot, localDuration)),
-                                    _buildCardPill('DURATION', _formatDuration(localDuration), highlight: true),
+                                    _buildCardPill('DURATION', _formatDuration(localDuration)),
                                     _buildCardPill('RATE', '₹$_basePrice/hr'),
                                   ],
                                 ),
@@ -539,6 +543,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                           MaterialPageRoute(
                             builder: (context) => ReviewBookingScreen(
                               ground: widget.ground,
+                              date: _selectedDate!,
                               startTime: slot,
                               endTime: _calculateEndTime(slot, localDuration),
                               durationStr: _formatDuration(localDuration),
@@ -578,7 +583,120 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     );
   }
 
+  Widget _buildDateSelector() {
+    final now = DateTime.now();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Text(
+              'Select Date',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            const Text(
+              '* Bookings Open for Next 15 days only',
+              style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 80,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: 15,
+            itemBuilder: (context, index) {
+              final date = now.add(Duration(days: index));
+              final isSelected = _selectedDate != null && 
+                                 _selectedDate!.year == date.year && 
+                                 _selectedDate!.month == date.month && 
+                                 _selectedDate!.day == date.day;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedDate = date;
+                    _selectedStartTime = null; // reset time selection when date changes
+                  });
+                },
+                child: Container(
+                  width: 65,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFE54F3F) : const Color(0xFF2C2C2E),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFFE54F3F) : Colors.transparent,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        DateFormat('MMM').format(date).toUpperCase(),
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : const Color(0xFF98989E),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        date.day.toString(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat('E').format(date),
+                        style: TextStyle(
+                          color: isSelected ? Colors.white70 : const Color(0xFF98989E),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTimeSlotsSection() {
+    if (_selectedDate == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.calendar_today, color: Color(0xFF98989E), size: 40),
+            SizedBox(height: 16),
+            Text(
+              'Please select a date\nto view available time slots.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF98989E), fontSize: 14, height: 1.4),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

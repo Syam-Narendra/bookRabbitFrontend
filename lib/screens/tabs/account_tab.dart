@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../constants.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -67,7 +70,7 @@ class _AccountTabState extends State<AccountTab> {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.only(top: 90, bottom: 140),
+      padding: const EdgeInsets.only(top: 16, bottom: 140),
       children: [
 
         // Title
@@ -227,14 +230,25 @@ class _AccountTabState extends State<AccountTab> {
             children: [
               _buildStatCard('Games', '12', Icons.sports_soccer),
               _buildStatCard('Hours', '24', Icons.schedule),
-              _buildStatCard('Rating', '4.8', Icons.star_border),
+              _buildStatCard('Upcoming Games', '2', Icons.event),
             ],
           ),
         ),
         
         const SizedBox(height: 32),
         
-        _buildMenuOption('Help & Support', Icons.help_outline),
+        _buildMenuOption('Help & Support', Icons.help_outline, onTap: () async {
+          final url = Uri.parse('${AppConstants.apiBaseUrl}/support');
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url);
+          }
+        }),
+        _buildMenuOption('Terms & Conditions', Icons.description_outlined, onTap: () async {
+          final url = Uri.parse('${AppConstants.apiBaseUrl}/terms');
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url);
+          }
+        }),
         _buildMenuOption('Log Out', Icons.logout, isDestructive: true),
         
         const SizedBox(height: 24),
@@ -246,13 +260,20 @@ class _AccountTabState extends State<AccountTab> {
   Widget _buildInviteBanner() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF2C2C2E)),
-        ),
+      child: InkWell(
+        onTap: () {
+          Share.share(
+            'Challenge me to a game on Book Rabbit! 🐰\nJoin using my link: ${AppConstants.inviteLink}',
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF2C2C2E)),
+          ),
         child: Row(
           children: [
             Expanded(
@@ -260,12 +281,12 @@ class _AccountTabState extends State<AccountTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
                   Text(
-                    'Invite friends, get rewards!',
+                    'Invite your friends!',
                     style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Share your link and earn exciting rewards\nwhen your friends join.',
+                    'Share your link and challenge your friends\nto a game on Book Rabbit.',
                     style: TextStyle(color: Color(0xFF98989E), fontSize: 13, height: 1.4),
                   ),
                 ],
@@ -285,11 +306,12 @@ class _AccountTabState extends State<AccountTab> {
             ),
             const SizedBox(width: 12),
             const Text(
-              '🎁',
+              '👋',
               style: TextStyle(fontSize: 40),
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -322,11 +344,13 @@ class _AccountTabState extends State<AccountTab> {
     );
   }
 
-  Widget _buildMenuOption(String title, IconData icon, {bool isDestructive = false}) {
+  Widget _buildMenuOption(String title, IconData icon, {bool isDestructive = false, VoidCallback? onTap}) {
     final color = isDestructive ? const Color(0xFFE54F3F) : Colors.white;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -345,6 +369,7 @@ class _AccountTabState extends State<AccountTab> {
           ),
           if (!isDestructive) const Icon(Icons.chevron_right, color: Color(0xFF98989E), size: 20),
         ],
+      ),
       ),
     );
   }
