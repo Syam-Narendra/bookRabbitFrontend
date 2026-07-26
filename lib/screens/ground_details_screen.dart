@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'review_booking_screen.dart';
+import '../services/ground_service.dart';
 
 class GroundDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
@@ -15,16 +17,66 @@ class GroundDetailsScreen extends StatefulWidget {
 
 class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   final List<String> _timeSlots = [];
+  final List<String> _timeSlots24 = [];
   String? _selectedStartTime;
   DateTime? _selectedDate;
   int _durationMins = 60;
   int _basePrice = 0;
+
+  Set<String> _bookedSegs = {};
+  Set<String> _heldSegs = {};
+  bool _isLoadingAvailability = false;
+  Timer? _heldPollTimer;
 
   @override
   void initState() {
     super.initState();
     _generateTimeSlots();
     _parsePrice();
+  }
+
+  @override
+  void dispose() {
+    _heldPollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchAvailability() async {
+    if (_selectedDate == null) return;
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+    setState(() => _isLoadingAvailability = true);
+    try {
+      final availability = await GroundService.fetchSlotAvailability(
+        groundId: widget.ground['id'] as String,
+        date: dateStr,
+      );
+      if (!mounted) return;
+      setState(() {
+        _bookedSegs = availability['bookedSegs'] ?? {};
+        _heldSegs = availability['heldSegs'] ?? {};
+        _isLoadingAvailability = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingAvailability = false);
+    }
+  }
+
+  void _startHeldPolling() {
+    _heldPollTimer?.cancel();
+    _heldPollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (_selectedDate == null) return;
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+      try {
+        final availability = await GroundService.fetchSlotAvailability(
+          groundId: widget.ground['id'] as String,
+          date: dateStr,
+        );
+        if (!mounted) return;
+        setState(() => _heldSegs = availability['heldSegs'] ?? {});
+      } catch (_) {
+        // Ignore — keep showing the last known held slots.
+      }
+    });
   }
 
   void _parsePrice() {
@@ -37,7 +89,8 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   void _generateTimeSlots() {
     _timeSlots.clear();
-    
+    _timeSlots24.clear();
+
     String openTimeStr = widget.ground['open_time']?.toString() ?? '10:00';
     String closeTimeStr = widget.ground['close_time']?.toString() ?? '20:00';
     
@@ -79,8 +132,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       String ampm = h >= 12 ? 'PM' : 'AM';
       int displayHour = h > 12 ? h - 12 : (h == 0 ? 12 : h);
       String minStr = m.toString().padLeft(2, '0');
-      
+
       _timeSlots.add('$displayHour:$minStr $ampm');
+      _timeSlots24.add('${h.toString().padLeft(2, '0')}:$minStr');
     }
   }
 
@@ -250,7 +304,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                     end: Alignment.topCenter,
                     colors: [
                       const Color(0xFF161616),
-                      const Color(0xFF161616).withOpacity(0.0),
+                      const Color(0xFF161616).withValues(alpha: 0.0),
                     ],
                   ),
                 ),
@@ -284,7 +338,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFE54F3F).withOpacity(0.15),
+                color: const Color(0xFFE54F3F).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -623,7 +677,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   setState(() {
                     _selectedDate = date;
                     _selectedStartTime = null; // reset time selection when date changes
+                    _bookedSegs = {};
+                    _heldSegs = {};
                   });
+                  _fetchAvailability();
+                  _startHeldPolling();
                 },
                 child: Container(
                   width: 65,
@@ -715,6 +773,12 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               Text(
                 '$_durationMins mins',
                 style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 14, fontWeight: FontWeight.bold),
+              )
+            else if (_isLoadingAvailability)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE54F3F)),
               ),
           ],
         ),
@@ -731,35 +795,121 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           ),
           itemBuilder: (context, index) {
             final slot = _timeSlots[index];
+            final slot24 = _timeSlots24[index];
             final isSelected = _selectedStartTime == slot;
+            final isPast = _isSlotPast(slot24);
+            final isBooked = _bookedSegs.contains(slot24);
+            final isHeld = !isBooked && _heldSegs.contains(slot24);
+            final isDisabled = isPast || isBooked || isHeld;
+
+            Color bgColor;
+            Color textColor;
+            String? badge;
+            if (isSelected) {
+              bgColor = const Color(0xFFE54F3F);
+              textColor = Colors.white;
+            } else if (isPast) {
+              bgColor = const Color(0xFF232323);
+              textColor = const Color(0xFF6B6B6B);
+              badge = 'Past';
+            } else if (isBooked) {
+              bgColor = const Color(0xFF3A1F1F);
+              textColor = const Color(0xFFE57373);
+              badge = 'Booked';
+            } else if (isHeld) {
+              bgColor = const Color(0xFF3A2F17);
+              textColor = const Color(0xFFE6A23C);
+              badge = '⏳ Held';
+            } else {
+              bgColor = const Color(0xFF2C2C2E);
+              textColor = const Color(0xFF98989E);
+            }
 
             return GestureDetector(
-              onTap: () {
-                _showDurationBottomSheet(slot);
-              },
+              onTap: isDisabled
+                  ? null
+                  : () {
+                      _showDurationBottomSheet(slot);
+                    },
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFE54F3F) : const Color(0xFF2C2C2E),
+                  color: bgColor,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  slot,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : const Color(0xFF98989E),
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      slot,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    if (badge != null)
+                      Text(
+                        badge,
+                        style: TextStyle(color: textColor.withValues(alpha: 0.85), fontSize: 9),
+                      ),
+                  ],
                 ),
               ),
             );
           },
         ),
+        const SizedBox(height: 16),
+        _buildSlotLegend(),
       ],
     );
   }
 
+  bool _isSlotPast(String slot24) {
+    final selectedDate = _selectedDate;
+    if (selectedDate == null) return false;
+    final now = DateTime.now();
+    final isToday = selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+    if (!isToday) return false;
 
+    final parts = slot24.split(':');
+    final slotMins = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    final nowMins = now.hour * 60 + now.minute;
+    return slotMins + 30 <= nowMins;
+  }
+
+  Widget _buildSlotLegend() {
+    final items = [
+      (const Color(0xFF2C2C2E), 'Available'),
+      (const Color(0xFFE54F3F), 'Selected'),
+      (const Color(0xFF3A1F1F), 'Booked'),
+      (const Color(0xFF3A2F17), 'Held'),
+      (const Color(0xFF232323), 'Past'),
+    ];
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: items.map((item) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: item.$1,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(item.$2, style: const TextStyle(color: Color(0xFF98989E), fontSize: 12)),
+          ],
+        );
+      }).toList(),
+    );
+  }
 
   Widget _buildCardPill(String title, String value, {bool highlight = false}) {
     return Expanded(
@@ -767,7 +917,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(

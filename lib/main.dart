@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
 import 'screens/vendor_login_screen.dart';
-import 'screens/otp_screen.dart';
 import 'screens/setup_profile_screen.dart';
 import 'screens/home_screen.dart';
+import 'services/auth_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final isLoggedIn = await AuthService.restoreSession();
+  runApp(MyApp(initialRoute: isLoggedIn ? '/home' : '/'));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String initialRoute;
+
+  const MyApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -30,11 +34,10 @@ class MyApp extends StatelessWidget {
           surface: Color(0xFF1C1C1E),
         ),
       ),
-      initialRoute: '/',
+      initialRoute: initialRoute,
       routes: {
         '/': (context) => const LoginScreen(),
         '/vendor_login': (context) => const VendorLoginScreen(),
-        '/otp': (context) => const OtpScreen(),
         '/setup_profile': (context) => const SetupProfileScreen(),
         '/home': (context) => const HomeScreen(),
       },

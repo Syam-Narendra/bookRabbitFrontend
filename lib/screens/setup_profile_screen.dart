@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
 
 class SetupProfileScreen extends StatefulWidget {
   const SetupProfileScreen({super.key});
@@ -11,8 +13,9 @@ class SetupProfileScreen extends StatefulWidget {
 
 class _SetupProfileScreenState extends State<SetupProfileScreen> {
   bool _obscurePassword = true;
-  bool _receiveNews = false;
+  final bool _receiveNews = false;
   bool _acceptTerms = true;
+  bool _isSubmitting = false;
   File? _imageFile;
   final TextEditingController _nameController = TextEditingController();
 
@@ -165,18 +168,37 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (_nameController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please enter your first name."),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                          return;
-                        }
-                        Navigator.pushNamed(context, '/home');
-                      },
+                      onPressed: _isSubmitting
+                          ? null
+                          : () async {
+                              if (_nameController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please enter your first name."),
+                                    backgroundColor: Colors.redAccent,
+                                  ),
+                                );
+                                return;
+                              }
+                              setState(() => _isSubmitting = true);
+                              try {
+                                await AuthService.updateName(_nameController.text.trim());
+                                if (!context.mounted) return;
+                                Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                              } on ApiException catch (e) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.message),
+                                    backgroundColor: Colors.redAccent,
+                                  ),
+                                );
+                              } finally {
+                                if (context.mounted) {
+                                  setState(() => _isSubmitting = false);
+                                }
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
@@ -184,13 +206,22 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Create Account',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.black,
+                              ),
+                            )
+                          : const Text(
+                              'Create Account',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 24),

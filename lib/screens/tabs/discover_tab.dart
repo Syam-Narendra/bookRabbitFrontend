@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import '../ground_details_screen.dart';
 
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:carousel_slider/carousel_slider.dart';
-import '../../constants.dart';
+import '../../services/ground_service.dart';
 
 class DiscoverTab extends StatefulWidget {
   final VoidCallback? onProfileTapped;
@@ -46,32 +43,11 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   Future<void> _fetchGrounds() async {
     try {
-      final response = await http.get(Uri.parse('${AppConstants.apiBaseUrl}/api/public/grounds'));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final grounds = data['grounds'] as List<dynamic>;
-        setState(() {
-          allGrounds = grounds.map<Map<String, dynamic>>((dynamic g) {
-            final groundMap = g as Map<String, dynamic>;
-            final images = groundMap['images'] as List<dynamic>? ?? [];
-            return <String, dynamic>{
-              ...groundMap,
-              'title': groundMap['name'] ?? '',
-              'location': groundMap['address'] ?? groundMap['city'] ?? '',
-              'price': '₹${groundMap['price_per_hour']}/hr',
-              'category': groundMap['type'] ?? 'All',
-              'type': groundMap['tag'] ?? groundMap['type'] ?? '',
-              'imageUrl': images.isNotEmpty ? images.first : 'assets/images/sports_bunnies.png',
-            };
-          }).toList();
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          hasError = true;
-          isLoading = false;
-        });
-      }
+      final grounds = await GroundService.fetchGrounds();
+      setState(() {
+        allGrounds = grounds;
+        isLoading = false;
+      });
     } catch (e) {
       setState(() {
         hasError = true;
@@ -125,7 +101,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 16.0,
                       mainAxisSpacing: 16.0,
-                      childAspectRatio: 0.75,
+                      childAspectRatio: 0.66,
                     ),
                     itemCount: filteredGrounds.length,
                     itemBuilder: (context, index) {
@@ -345,9 +321,13 @@ class _DiscoverTabState extends State<DiscoverTab> {
           // Price and Details
           Row(
             children: [
-              Text(
-                ground['price'],
-                style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 13, fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  ground['price'],
+                  style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 13, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 4),
               Expanded(

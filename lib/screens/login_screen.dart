@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
+import 'otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
 
   final TextEditingController phoneController = TextEditingController();
+  bool _isSubmitting = false;
 
   // Replace with your real URLs later
   final String cricketRabbitUrl =
@@ -100,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             fontSize: 15,
-                            color: Colors.white.withOpacity(.95),
+                            color: Colors.white.withValues(alpha: .95),
                             height: 1.5,
                           ),
                         ),
@@ -149,25 +153,68 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               elevation: 0,
                             ),
-                            onPressed: () {
-                              if (phoneController.text.length != 10) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Please enter a valid 10-digit mobile number."),
-                                    backgroundColor: Colors.redAccent,
+                            onPressed: _isSubmitting
+                                ? null
+                                : () async {
+                                    if (phoneController.text.length != 10) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Please enter a valid 10-digit mobile number."),
+                                          backgroundColor: Colors.redAccent,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    final phone = phoneController.text;
+                                    setState(() => _isSubmitting = true);
+                                    try {
+                                      final devOtp = await AuthService.sendOtp(phone);
+                                      if (!context.mounted) return;
+                                      if (devOtp != null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('DEV OTP: $devOtp'),
+                                            backgroundColor: Colors.black87,
+                                            duration: const Duration(seconds: 6),
+                                          ),
+                                        );
+                                      }
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => OtpScreen(phone: phone),
+                                        ),
+                                      );
+                                    } on ApiException catch (e) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(e.message),
+                                          backgroundColor: Colors.redAccent,
+                                        ),
+                                      );
+                                    } finally {
+                                      if (context.mounted) {
+                                        setState(() => _isSubmitting = false);
+                                      }
+                                    }
+                                  },
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : Text(
+                                    "LOGIN",
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.5,
+                                    ),
                                   ),
-                                );
-                                return;
-                              }
-                              Navigator.pushNamed(context, '/otp');
-                            },
-                            child: Text(
-                              "LOGIN",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
                           ),
                         ),
                         const SizedBox(height: 12),

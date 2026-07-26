@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key});
+  final String phone;
+
+  const OtpScreen({super.key, required this.phone});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -10,6 +14,7 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  bool _isVerifying = false;
 
   @override
   void dispose() {
@@ -61,9 +66,9 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Enter the code we sent to your mobile number\n+91 9876543210',
-                    style: TextStyle(
+                  Text(
+                    'Enter the code we sent to your mobile number\n+91 ${widget.phone}',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       height: 1.4,
@@ -152,6 +157,34 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
+  Future<void> _submitOtp() async {
+    final enteredOtp = _controllers.map((c) => c.text).join();
+    setState(() => _isVerifying = true);
+    try {
+      final user = await AuthService.verifyOtp(widget.phone, enteredOtp);
+      if (!mounted) return;
+      if (user.fullName == null || user.fullName!.trim().isEmpty) {
+        Navigator.pushNamed(context, '/setup_profile');
+      } else {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      for (final c in _controllers) {
+        c.clear();
+      }
+      _focusNodes[0].requestFocus();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
+    }
+  }
+
   Widget _buildCodeBox(int index) {
     return Container(
       width: 48,
@@ -174,21 +207,12 @@ class _OtpScreenState extends State<OtpScreen> {
             hintText: '•',
             hintStyle: TextStyle(color: Colors.grey[600], fontSize: 24),
           ),
+          enabled: !_isVerifying,
           onChanged: (value) {
             if (value.isNotEmpty && index < 5) {
               _focusNodes[index + 1].requestFocus();
             } else if (value.isNotEmpty && index == 5) {
-              String enteredOtp = _controllers.map((c) => c.text).join();
-              if (enteredOtp == "123456") {
-                Navigator.pushNamed(context, '/setup_profile');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Incorrect OTP. Please try 123456."),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
-              }
+              _submitOtp();
             } else if (value.isEmpty && index > 0) {
               _focusNodes[index - 1].requestFocus();
             }

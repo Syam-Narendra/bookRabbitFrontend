@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'otp_screen.dart';
 
 class VendorLoginScreen extends StatefulWidget {
   const VendorLoginScreen({super.key});
@@ -100,7 +101,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             fontSize: 15,
-                            color: Colors.white.withOpacity(.95),
+                            color: Colors.white.withValues(alpha: .95),
                             height: 1.5,
                           ),
                         ),
@@ -159,7 +160,12 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                                 );
                                 return;
                               }
-                              Navigator.pushNamed(context, '/otp');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => OtpScreen(phone: phoneController.text),
+                                ),
+                              );
                             },
                             child: Text(
                               "LOGIN",

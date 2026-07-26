@@ -1,7 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../constants.dart';
+import '../../services/auth_service.dart';
+import '../../services/api_client.dart';
+import '../../services/booking_service.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -11,12 +16,95 @@ class AccountTab extends StatefulWidget {
 }
 
 class _AccountTabState extends State<AccountTab> {
-  final TextEditingController _firstNameController = TextEditingController(text: 'Alex');
+  final TextEditingController _firstNameController = TextEditingController();
+  bool _isUploadingPhoto = false;
+
+  int _gamesCount = 0;
+  int _upcomingCount = 0;
+  double _hoursTotal = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _firstNameController.text = AuthService.currentUser?.fullName ?? '';
+    AuthService.fetchMe().then((_) {
+      if (!mounted) return;
+      setState(() {
+        _firstNameController.text = AuthService.currentUser?.fullName ?? '';
+      });
+    }).catchError((_) {
+      // Offline / request failed — keep showing the cached currentUser.
+    });
+    _fetchStats();
+  }
+
+  Future<void> _fetchStats() async {
+    try {
+      final bookings = await BookingService.fetchMyBookings();
+      final stats = BookingService.computeStats(bookings);
+      if (!mounted) return;
+      setState(() {
+        _gamesCount = stats['games']!.toInt();
+        _hoursTotal = stats['hours']!.toDouble();
+        _upcomingCount = stats['upcoming']!.toInt();
+      });
+    } catch (_) {
+      // Offline / request failed — keep showing zeros rather than mock data.
+    }
+  }
 
   @override
   void dispose() {
     _firstNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    // Downscale on pick — full-resolution camera/gallery photos on real devices
+    // (often 5-15MB) were blowing past the backend's upload size limit, which
+    // is what made this only fail on mobile (simulators/small test images
+    // stayed under the limit).
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (pickedFile == null) return;
+
+    final file = File(pickedFile.path);
+    final sizeBytes = await file.length();
+    if (sizeBytes > 8 * 1024 * 1024) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image is too large. Please choose a smaller photo.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isUploadingPhoto = true);
+    try {
+      await AuthService.updateProfileImage(file);
+      if (!mounted) return;
+      setState(() {});
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    await AuthService.logout();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
   }
 
   void _showEditNameDialog(BuildContext context) {
@@ -47,17 +135,29 @@ class _AccountTabState extends State<AccountTab> {
               child: const Text('Cancel', style: TextStyle(color: Color(0xFF98989E))),
             ),
             TextButton(
-              onPressed: () {
-                setState(() {}); // Trigger a rebuild to reflect the new name in the Text widget
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('User name updated successfully!'),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+              onPressed: () async {
+                final name = _firstNameController.text.trim();
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await AuthService.updateName(name);
+                  if (!mounted) return;
+                  setState(() {});
+                  navigator.pop();
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('User name updated successfully!'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                } on ApiException catch (e) {
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+                  );
+                }
               },
               child: const Text('Save', style: TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold)),
             ),
@@ -88,11 +188,16 @@ class _AccountTabState extends State<AccountTab> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Row(
             children: [
-              Stack(
+              GestureDetector(
+                onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
+                child: Stack(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 44,
-                    backgroundImage: NetworkImage('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000&auto=format&fit=crop'), // Placeholder portrait
+                    backgroundImage: NetworkImage(
+                      AuthService.currentUser?.profileImageUrl ??
+                          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000&auto=format&fit=crop',
+                    ), // Placeholder portrait
                   ),
                   Positioned(
                     bottom: 0,
@@ -103,10 +208,17 @@ class _AccountTabState extends State<AccountTab> {
                         color: Color(0xFF2C2C2E),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                      child: _isUploadingPhoto
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.camera_alt, color: Colors.white, size: 14),
                     ),
                   ),
                 ],
+                ),
               ),
               const SizedBox(width: 16),
               Column(
@@ -158,10 +270,13 @@ class _AccountTabState extends State<AccountTab> {
                           opacity: 0.5,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text('MOBILE NUMBER', style: TextStyle(color: Color(0xFF98989E), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-                              SizedBox(height: 4),
-                              Text('+91 9876543210', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                            children: [
+                              const Text('MOBILE NUMBER', style: TextStyle(color: Color(0xFF98989E), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                              const SizedBox(height: 4),
+                              Text(
+                                AuthService.currentUser?.phoneNumber ?? '',
+                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
                             ],
                           ),
                         ),
@@ -228,9 +343,9 @@ class _AccountTabState extends State<AccountTab> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatCard('Games', '12', Icons.sports_soccer),
-              _buildStatCard('Hours', '24', Icons.schedule),
-              _buildStatCard('Upcoming Games', '2', Icons.event),
+              _buildStatCard('Games', '$_gamesCount', Icons.sports_soccer),
+              _buildStatCard('Hours', _formatHours(_hoursTotal), Icons.schedule),
+              _buildStatCard('Upcoming Games', '$_upcomingCount', Icons.event),
             ],
           ),
         ),
@@ -249,7 +364,7 @@ class _AccountTabState extends State<AccountTab> {
             await launchUrl(url);
           }
         }),
-        _buildMenuOption('Log Out', Icons.logout, isDestructive: true),
+        _buildMenuOption('Log Out', Icons.logout, isDestructive: true, onTap: _logout),
         
         const SizedBox(height: 24),
         _buildInviteBanner(),
@@ -296,7 +411,7 @@ class _AccountTabState extends State<AccountTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFE56B3F).withOpacity(0.15),
+                color: const Color(0xFFE56B3F).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -314,6 +429,10 @@ class _AccountTabState extends State<AccountTab> {
       ),
       ),
     );
+  }
+
+  String _formatHours(double hours) {
+    return hours % 1 == 0 ? hours.toInt().toString() : hours.toStringAsFixed(1);
   }
 
   Widget _buildStatCard(String label, String value, IconData icon) {
@@ -355,7 +474,7 @@ class _AccountTabState extends State<AccountTab> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isDestructive ? const Color(0xFFE54F3F).withOpacity(0.1) : const Color(0xFF2C2C2E),
+              color: isDestructive ? const Color(0xFFE54F3F).withValues(alpha: 0.1) : const Color(0xFF2C2C2E),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),

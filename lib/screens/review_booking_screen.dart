@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:intl/intl.dart';
 import '../constants.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
+import '../services/booking_service.dart';
+import 'booking_success_screen.dart';
 
 class ReviewBookingScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
@@ -14,7 +18,7 @@ class ReviewBookingScreen extends StatefulWidget {
   final int finalPrice;
 
   const ReviewBookingScreen({
-    Key? key,
+    super.key,
     required this.ground,
     required this.date,
     required this.startTime,
@@ -23,7 +27,7 @@ class ReviewBookingScreen extends StatefulWidget {
     required this.fare,
     required this.platformFee,
     required this.finalPrice,
-  }) : super(key: key);
+  });
 
   @override
   State<ReviewBookingScreen> createState() => _ReviewBookingScreenState();
@@ -31,6 +35,8 @@ class ReviewBookingScreen extends StatefulWidget {
 
 class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
   late Razorpay _razorpay;
+  bool _isCreatingOrder = false;
+  BookingOrder? _order;
 
   @override
   void initState() {
@@ -47,14 +53,93 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     _razorpay.clear();
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Payment Successful! Payment ID: ${response.paymentId}'), backgroundColor: Colors.green),
-    );
-    Navigator.popUntil(context, (route) => route.isFirst);
+  // Converts a "H:MM AM/PM" display string (as produced by ground_details_screen)
+  // to 24-hour "HH:MM", the format booking-order.ts expects.
+  String _to24Hour(String time12) {
+    final parts = time12.split(' ');
+    final timeParts = parts[0].split(':');
+    int hours = int.parse(timeParts[0]);
+    final mins = timeParts[1];
+    final isPM = parts[1] == 'PM';
+    if (isPM && hours != 12) hours += 12;
+    if (!isPM && hours == 12) hours = 0;
+    return '${hours.toString().padLeft(2, '0')}:$mins';
+  }
+
+  Future<void> _startPayment() async {
+    setState(() => _isCreatingOrder = true);
+    try {
+      final order = await BookingService.createOrder(
+        groundId: widget.ground['id'] as String,
+        date: DateFormat('yyyy-MM-dd').format(widget.date),
+        startTime: _to24Hour(widget.startTime),
+        endTime: _to24Hour(widget.endTime),
+      );
+      _order = order;
+
+      final options = {
+        'key': AppConstants.razorpayKey,
+        'order_id': order.orderId,
+        'amount': (order.totalAmount * 100).round(),
+        'name': 'Book Rabbit',
+        'description': 'Booking for ${widget.ground['title']}',
+        'prefill': {
+          'contact': AuthService.currentUser?.phoneNumber ?? '9876543210',
+          'name': AuthService.currentUser?.fullName ?? '',
+        },
+      };
+      _razorpay.open(options);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+      );
+    } finally {
+      if (mounted) setState(() => _isCreatingOrder = false);
+    }
+  }
+
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    try {
+      final referenceId = await BookingService.verifyPayment(
+        razorpayPaymentId: response.paymentId!,
+        razorpayOrderId: response.orderId!,
+        razorpaySignature: response.signature!,
+      );
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookingSuccessScreen(
+            referenceId: referenceId,
+            ground: widget.ground,
+            date: widget.date,
+            startTime: widget.startTime,
+            endTime: widget.endTime,
+            finalPrice: widget.finalPrice,
+          ),
+        ),
+        (route) => route.isFirst,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+      );
+    }
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
+    final order = _order;
+    if (order != null) {
+      BookingService.releaseSlot(
+        groundId: widget.ground['id'] as String,
+        date: DateFormat('yyyy-MM-dd').format(widget.date),
+        startTime: _to24Hour(widget.startTime),
+        endTime: _to24Hour(widget.endTime),
+        holdId: order.holdId,
+      );
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Payment Failed: ${response.message}'), backgroundColor: Colors.red),
     );
@@ -109,23 +194,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: () {
-                    var options = {
-                      'key': AppConstants.razorpayKey,
-                      'amount': widget.finalPrice * 100, // in the smallest currency sub-unit (paise)
-                      'name': 'Book Rabbit',
-                      'description': 'Booking for ${widget.ground['title']}',
-                      'prefill': {
-                        'contact': '9876543210',
-                        'email': 'user@example.com'
-                      }
-                    };
-                    try {
-                      _razorpay.open(options);
-                    } catch (e) {
-                      debugPrint('Error: $e');
-                    }
-                  },
+                  onPressed: _isCreatingOrder ? null : _startPayment,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE54F3F),
                     foregroundColor: Colors.white,
@@ -133,7 +202,13 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text('Pay ₹${widget.finalPrice}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: _isCreatingOrder
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : Text('Pay ₹${widget.finalPrice}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

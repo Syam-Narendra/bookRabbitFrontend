@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/booking_service.dart';
+import '../booking_detail_screen.dart';
 
 class HistoryTab extends StatefulWidget {
   const HistoryTab({super.key});
@@ -9,64 +11,66 @@ class HistoryTab extends StatefulWidget {
 
 class _HistoryTabState extends State<HistoryTab> {
   String _selectedHistoryTab = 'All';
-  
   static final List<String> historyTabs = ['All', 'Upcoming', 'Completed', 'Cancelled'];
-  
-  static final List<Map<String, dynamic>> mockBookings = [
-    {
-      'title': 'Green Turf Arena',
-      'type': 'Football Turf',
-      'date': '24 May 2025, Sat',
-      'time': '06:00 PM – 07:00 PM',
-      'price': '₹600',
-      'status': 'Upcoming',
-      'imageUrl': 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?q=80&w=1974&auto=format&fit=crop'
-    },
-    {
-      'title': 'Smash Badminton Club',
-      'type': 'Badminton Court',
-      'date': '26 May 2025, Mon',
-      'time': '08:00 AM – 09:00 AM',
-      'price': '₹450',
-      'status': 'Upcoming',
-      'imageUrl': 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?q=80&w=1974&auto=format&fit=crop',
-    },
-    {
-      'title': 'PowerPlay Box Cricket',
-      'type': 'Box Cricket',
-      'date': '18 May 2025, Sun',
-      'time': '07:00 PM – 08:30 PM',
-      'price': '₹900',
-      'status': 'Completed',
-      'imageUrl': 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2000&auto=format&fit=crop',
-    },
-    {
-      'title': 'Kickoff Turf',
-      'type': 'Football Turf',
-      'date': '12 May 2025, Mon',
-      'time': '06:00 PM – 07:00 PM',
-      'price': '₹600',
-      'status': 'Completed',
-      'imageUrl': 'https://images.unsplash.com/photo-1624314138470-5a2f24623f10?q=80&w=1974&auto=format&fit=crop',
-    },
-    {
-      'title': 'Hoop Central',
-      'type': 'Basketball Court',
-      'date': '10 May 2025, Sat',
-      'time': '06:00 PM – 07:00 PM',
-      'price': '₹500',
-      'status': 'Cancelled',
-      'imageUrl': 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=2067&auto=format&fit=crop',
-    },
-  ];
+
+  List<Map<String, dynamic>> _bookings = [];
+  bool _isLoading = true;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
+  }
+
+  Future<void> _fetchBookings() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+    try {
+      final bookings = await BookingService.fetchMyBookings();
+      setState(() {
+        _bookings = bookings;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFE54F3F)));
+    }
+
+    if (_hasError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Failed to load bookings', style: TextStyle(color: Colors.white70, fontSize: 16)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _fetchBookings,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE54F3F)),
+              child: const Text('Retry', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final mockBookings = _bookings;
     List<Map<String, dynamic>> displayedBookings = mockBookings;
     if (_selectedHistoryTab != 'All') {
       displayedBookings = mockBookings.where((b) => b['status'] == _selectedHistoryTab).toList();
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -125,9 +129,16 @@ class _HistoryTabState extends State<HistoryTab> {
         
         // Content List
         Expanded(
-          child: ListView(
+          child: mockBookings.isEmpty
+            ? const Center(
+                child: Text(
+                  'No bookings yet.',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              )
+            : ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
-            children: _selectedHistoryTab == 'All' 
+            children: _selectedHistoryTab == 'All'
               ? [
                   if (mockBookings.any((b) => b['status'] == 'Upcoming')) ...[
                     const Padding(
@@ -163,16 +174,25 @@ class _HistoryTabState extends State<HistoryTab> {
     Color statusBgColor;
     if (booking['status'] == 'Upcoming') {
       statusColor = const Color(0xFFE6883C); // Orange
-      statusBgColor = const Color(0xFFE6883C).withOpacity(0.15);
+      statusBgColor = const Color(0xFFE6883C).withValues(alpha: 0.15);
     } else if (booking['status'] == 'Completed') {
       statusColor = const Color(0xFF34C759); // Green
-      statusBgColor = const Color(0xFF34C759).withOpacity(0.15);
+      statusBgColor = const Color(0xFF34C759).withValues(alpha: 0.15);
     } else {
       statusColor = const Color(0xFFE54F3F); // Red
-      statusBgColor = const Color(0xFFE54F3F).withOpacity(0.15);
+      statusBgColor = const Color(0xFFE54F3F).withValues(alpha: 0.15);
     }
 
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingDetailScreen(booking: booking),
+          ),
+        );
+      },
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -260,6 +280,7 @@ class _HistoryTabState extends State<HistoryTab> {
             ],
           ),
         ],
+      ),
       ),
     );
   }
