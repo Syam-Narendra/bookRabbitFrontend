@@ -7,7 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
 // geocoding is NOT supported on web — we use Nominatim for web instead
-import 'package:geocoding/geocoding.dart' as geo;
+import 'package:geocoding/geocoding.dart';
 import '../ground_details_screen.dart';
 import '../../services/ground_service.dart';
 
@@ -114,7 +114,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
   }
 
   Future<void> _reverseGeocodeMobile(double lat, double lng) async {
-    final placemarks = await geo.placemarkFromCoordinates(lat, lng);
+    final placemarks =
+        await Geocoding().placemarkFromCoordinates(lat, lng);
     if (placemarks.isNotEmpty) {
       final p = placemarks.first;
       final area = p.subLocality?.isNotEmpty == true

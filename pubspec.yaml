@@ -49,7 +49,7 @@ dependencies:
   flutter_animate: ^4.5.2
   shimmer: ^3.0.0
   geolocator: ^13.0.4
-  geocoding: ^3.0.0
+  geocoding: ^5.0.0
 
 dev_dependencies:
   flutter_test:
