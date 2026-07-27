@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,6 +20,7 @@ class AccountTab extends StatefulWidget {
 class _AccountTabState extends State<AccountTab> {
   final TextEditingController _firstNameController = TextEditingController();
   bool _isUploadingPhoto = false;
+  bool _isLoadingStats = true;
 
   int _gamesCount = 0;
   int _upcomingCount = 0;
@@ -40,6 +42,7 @@ class _AccountTabState extends State<AccountTab> {
   }
 
   Future<void> _fetchStats() async {
+    setState(() => _isLoadingStats = true);
     try {
       final bookings = await BookingService.fetchMyBookings();
       final stats = BookingService.computeStats(bookings);
@@ -48,9 +51,11 @@ class _AccountTabState extends State<AccountTab> {
         _gamesCount = stats['games']!.toInt();
         _hoursTotal = stats['hours']!.toDouble();
         _upcomingCount = stats['upcoming']!.toInt();
+        _isLoadingStats = false;
       });
     } catch (_) {
       // Offline / request failed — keep showing zeros rather than mock data.
+      if (mounted) setState(() => _isLoadingStats = false);
     }
   }
 
@@ -112,12 +117,20 @@ class _AccountTabState extends State<AccountTab> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: const Color(0xFF1C1C1E),
-              title: const Text('Confirm Logout', style: TextStyle(color: Colors.white)),
-              content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
+              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              title: const Text('Confirm Logout',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              content: const Text('Are you sure you want to log out?',
+                  style: TextStyle(color: Colors.white70, fontSize: 13)),
               actions: [
                 TextButton(
                   onPressed: isLoggingOut ? null : () => Navigator.pop(dialogContext),
-                  child: Text('Cancel', style: TextStyle(color: isLoggingOut ? const Color(0xFF52525B) : const Color(0xFF98989E))),
+                  child: Text('Cancel',
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: isLoggingOut ? const Color(0xFF52525B) : const Color(0xFF98989E))),
                 ),
                 TextButton(
                   onPressed: isLoggingOut
@@ -142,7 +155,11 @@ class _AccountTabState extends State<AccountTab> {
                             color: Color(0xFFE54F3F),
                           ),
                         )
-                      : const Text('Log Out', style: TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold)),
+                      : const Text('Log Out',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFFE54F3F),
+                              fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -162,15 +179,19 @@ class _AccountTabState extends State<AccountTab> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: const Color(0xFF1C1C1E),
-              title: const Text('Edit Name', style: TextStyle(color: Colors.white)),
+              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              title: const Text('Edit Name',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               content: TextField(
                 controller: _firstNameController,
                 enabled: !isSaving,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
                 cursorColor: const Color(0xFFE54F3F),
                 decoration: const InputDecoration(
                   hintText: 'Enter your first name',
-                  hintStyle: TextStyle(color: Color(0xFF98989E)),
+                  hintStyle: TextStyle(color: Color(0xFF98989E), fontSize: 13),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Color(0xFF2C2C2E)),
                   ),
@@ -184,7 +205,9 @@ class _AccountTabState extends State<AccountTab> {
                   onPressed: isSaving ? null : () => Navigator.pop(context),
                   child: Text(
                     'Cancel',
-                    style: TextStyle(color: isSaving ? const Color(0xFF52525B) : const Color(0xFF98989E)),
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: isSaving ? const Color(0xFF52525B) : const Color(0xFF98989E)),
                   ),
                 ),
                 TextButton(
@@ -231,7 +254,10 @@ class _AccountTabState extends State<AccountTab> {
                         )
                       : const Text(
                           'Save',
-                          style: TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFFE54F3F),
+                              fontWeight: FontWeight.bold),
                         ),
                 ),
               ],
@@ -309,7 +335,7 @@ class _AccountTabState extends State<AccountTab> {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 680),
             child: ListView(
-              padding: EdgeInsets.only(top: 16, bottom: bottomPad, left: 16, right: 16),
+              padding: EdgeInsets.only(top: 8, bottom: bottomPad, left: 16, right: 16),
               children: [
                 _buildTitle(),
                 const SizedBox(height: 32),
@@ -331,20 +357,15 @@ class _AccountTabState extends State<AccountTab> {
   }
 
   Widget _buildTitle() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.0),
-      child: Text(
-        'Profile',
-        style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
-      ),
+    return const Text(
+      'Profile',
+      style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
     ).animate().fade(duration: 300.ms).slideX(begin: -0.1, end: 0, curve: Curves.easeOut);
   }
 
   Widget _buildProfilePhotoSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        children: [
+    return Row(
+      children: [
           GestureDetector(
             onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
             child: Stack(
@@ -392,15 +413,12 @@ class _AccountTabState extends State<AccountTab> {
               ),
             ],
           ),
-        ],
-      ),
+      ],
     ).animate().fade(delay: 100.ms).slideY(begin: 0.1);
   }
 
   Widget _buildFormFields() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Container(
+    return Container(
         decoration: BoxDecoration(
           color: const Color(0xFF1C1C1E),
           borderRadius: BorderRadius.circular(20),
@@ -485,21 +503,37 @@ class _AccountTabState extends State<AccountTab> {
             ),
           ],
         ),
-      ),
     ).animate().fade(delay: 200.ms).slideY(begin: 0.1);
   }
 
   Widget _buildStatsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildStatCard('Games', '$_gamesCount', Icons.sports_soccer).animate().fade(delay: 300.ms).slideY(begin: 0.2),
-          _buildStatCard('Hours', _formatHours(_hoursTotal), Icons.schedule).animate().fade(delay: 350.ms).slideY(begin: 0.2),
-          _buildStatCard('Upcoming Games', '$_upcomingCount', Icons.event).animate().fade(delay: 400.ms).slideY(begin: 0.2),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: _isLoadingStats
+          ? List.generate(
+              3,
+              (_) => Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Shimmer.fromColors(
+                    baseColor: const Color(0xFF2C2C2E),
+                    highlightColor: const Color(0xFF3A3A3C),
+                    child: Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C2C2E),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : [
+              _buildStatCard('Games', '$_gamesCount', Icons.sports_soccer).animate().fade(delay: 300.ms).slideY(begin: 0.2),
+              _buildStatCard('Hours', _formatHours(_hoursTotal), Icons.schedule).animate().fade(delay: 350.ms).slideY(begin: 0.2),
+              _buildStatCard('Upcoming', '$_upcomingCount', Icons.event).animate().fade(delay: 400.ms).slideY(begin: 0.2),
+            ],
     );
   }
 
@@ -607,9 +641,7 @@ class _AccountTabState extends State<AccountTab> {
   }
 
   Widget _buildInviteBanner() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: InkWell(
+    return InkWell(
         onTap: () {
           Share.share(
             'Challenge me to a game on Book Rabbit! 🐰\nJoin using my link: ${AppConstants.inviteLink}',
@@ -661,7 +693,6 @@ class _AccountTabState extends State<AccountTab> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -702,7 +733,7 @@ class _AccountTabState extends State<AccountTab> {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
         child: Row(
         children: [
           Container(

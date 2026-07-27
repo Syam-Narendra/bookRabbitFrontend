@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show asin, cos, pi, sin, sqrt;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 // geocoding is NOT supported on web — we use Nominatim for web instead
 import 'package:geocoding/geocoding.dart';
 import '../ground_details_screen.dart';
+import '../../services/auth_service.dart';
 import '../../services/ground_service.dart';
 
 class DiscoverTab extends StatefulWidget {
@@ -33,6 +35,10 @@ class _DiscoverTabState extends State<DiscoverTab> {
   String _locationAddress = 'Fetching your location';
   bool _isDetectingLocation = false;
   StreamSubscription<Position>? _positionStream;
+
+  // Current user position for distance calculation
+  double? _userLat;
+  double? _userLng;
 
   static final List<Map<String, dynamic>> categoryData = [
     {'name': 'All', 'icon': Icons.auto_awesome},
@@ -95,7 +101,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
     _positionStream = Geolocator.getPositionStream(
       locationSettings: locationSettings,
     ).listen(
-      (Position position) => _reverseGeocode(position),
+      (Position position) {
+        // Store coordinates for distance calculation
+        if (mounted) {
+          setState(() {
+            _userLat = position.latitude;
+            _userLng = position.longitude;
+          });
+        }
+        _reverseGeocode(position);
+      },
       onError: (_) => _setLocationFallback('Unable to detect'),
     );
   }
@@ -129,6 +144,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
       if (!mounted) return;
       setState(() {
+        _userLat = lat;
+        _userLng = lng;
         _locationArea = area;
         _locationAddress = address.isNotEmpty ? address : 'Location detected';
         _isDetectingLocation = false;
@@ -176,6 +193,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
       if (!mounted) return;
       setState(() {
+        _userLat = lat;
+        _userLng = lng;
         _locationArea = area;
         _locationAddress = addressStr.isNotEmpty ? addressStr : 'Location detected';
         _isDetectingLocation = false;
@@ -195,14 +214,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
   }
 
   /// Re-detect once (called from the bottom sheet).
-  Future<void> _detectOnce(BuildContext sheetContext) async {
+  /// [closeSheet] is called when detection is complete (success or failure)
+  /// so the sheet knows when to dismiss itself.
+  Future<void> _detectOnce({VoidCallback? closeSheet}) async {
     setState(() => _isDetectingLocation = true);
-    if (Navigator.canPop(sheetContext)) Navigator.pop(sheetContext);
 
     if (!kIsWeb) {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _setLocationFallback('Location services off');
+        closeSheet?.call();
         return;
       }
     }
@@ -214,6 +235,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       _setLocationFallback('Location access denied');
+      closeSheet?.call();
       return;
     }
 
@@ -223,12 +245,21 @@ class _DiscoverTabState extends State<DiscoverTab> {
           accuracy: LocationAccuracy.medium,
         ),
       );
+      // Store coordinates immediately — distances update before geocoding
+      if (mounted) {
+        setState(() {
+          _userLat = position.latitude;
+          _userLng = position.longitude;
+        });
+      }
       await _reverseGeocode(position);
       // Restart live stream
       await _positionStream?.cancel();
       _startLocationStream();
     } catch (_) {
       _setLocationFallback('Unable to detect');
+    } finally {
+      closeSheet?.call();
     }
   }
 
@@ -267,7 +298,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     try {
       final grounds = await GroundService.fetchGrounds();
       setState(() {
-        allGrounds = grounds;
+        allGrounds = _sortByDistance(grounds);
         isLoading = false;
       });
     } catch (e) {
@@ -276,6 +307,52 @@ class _DiscoverTabState extends State<DiscoverTab> {
         isLoading = false;
       });
     }
+  }
+
+  /// Parse lat/lng from a Google Maps URL like:
+  ///   https://maps.google.com/?q=17.4614709334164,78.36532997854147
+  static (double lat, double lng)? _parseMapsUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+    final q = uri.queryParameters['q'];
+    if (q == null) return null;
+    final parts = q.split(',');
+    if (parts.length < 2) return null;
+    final lat = double.tryParse(parts[0].trim());
+    final lng = double.tryParse(parts[1].trim());
+    if (lat == null || lng == null) return null;
+    return (lat, lng);
+  }
+
+  /// Haversine formula — returns distance in kilometres.
+  static double _haversineKm(
+      double lat1, double lng1, double lat2, double lng2) {
+    const r = 6371.0; // Earth radius in km
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLng = (lng2 - lng1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) *
+            cos(lat2 * pi / 180) *
+            sin(dLng / 2) *
+            sin(dLng / 2);
+    return r * 2 * asin(sqrt(a));
+  }
+
+  /// Sort grounds list by distance from current user position.
+  /// Grounds without a parseable maps_url are pushed to the end.
+  List<Map<String, dynamic>> _sortByDistance(
+      List<Map<String, dynamic>> grounds) {
+    if (_userLat == null || _userLng == null) return grounds;
+    final withDist = grounds.map((g) {
+      final coords = _parseMapsUrl(g['maps_url'] as String?);
+      final dist = coords != null
+          ? _haversineKm(_userLat!, _userLng!, coords.$1, coords.$2)
+          : double.maxFinite;
+      return (g, dist);
+    }).toList()
+      ..sort((a, b) => a.$2.compareTo(b.$2));
+    return withDist.map((t) => t.$1).toList();
   }
 
   // ─── Nominatim forward-geocode search ───────────────────────────────────────
@@ -317,6 +394,14 @@ class _DiscoverTabState extends State<DiscoverTab> {
       builder: (modalContext) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            // Mirror outer _isDetectingLocation into modal so the spinner
+            // stays visible while GPS is fetching.
+            final detecting = _isDetectingLocation;
+
+            void closeSheet() {
+              if (Navigator.canPop(modalContext)) Navigator.pop(modalContext);
+            }
+
             void onSearchChanged(String query) {
               _searchDebounce?.cancel();
               if (query.trim().length < 2) {
@@ -361,8 +446,17 @@ class _DiscoverTabState extends State<DiscoverTab> {
               final fullAddress =
                   [city, state, country].where((s) => s.isNotEmpty).join(', ');
 
+              // Extract lat/lon from the Nominatim result so distances
+              // are recalculated and the list re-sorts immediately.
+              final newLat = double.tryParse(place['lat']?.toString() ?? '');
+              final newLng = double.tryParse(place['lon']?.toString() ?? '');
+
               _positionStream?.cancel();
               setState(() {
+                if (newLat != null && newLng != null) {
+                  _userLat = newLat;
+                  _userLng = newLng;
+                }
                 _locationArea = area;
                 _locationAddress =
                     fullAddress.isNotEmpty ? fullAddress : area;
@@ -404,53 +498,60 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
                   // ── GPS button ──────────────────────────────────────────────
                   InkWell(
-                    onTap: _isDetectingLocation
+                    onTap: detecting
                         ? null
-                        : () => _detectOnce(modalContext),
+                        : () => _detectOnce(closeSheet: closeSheet),
                     borderRadius: BorderRadius.circular(16),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE54F3F).withValues(alpha: 0.12),
+                        color: detecting
+                            ? const Color(0xFFE54F3F).withValues(alpha: 0.08)
+                            : const Color(0xFFE54F3F).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                             color: const Color(0xFFE54F3F)
-                                .withValues(alpha: 0.4)),
+                                .withValues(alpha: detecting ? 0.25 : 0.4)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.my_location,
-                              color: Color(0xFFE54F3F), size: 22),
+                          detecting
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Color(0xFFE54F3F)),
+                                )
+                              : const Icon(Icons.my_location,
+                                  color: Color(0xFFE54F3F), size: 22),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Use Current Location',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 2),
                                 Text(
-                                  _isDetectingLocation
-                                      ? 'Fetching live location…'
-                                      : '',
-                                  style: const TextStyle(
-                                      color: Color(0xFF98989E), fontSize: 12),
-                                ),
+                                  detecting
+                                      ? 'Detecting location…'
+                                      : 'Use Current Location',
+                                  style: TextStyle(
+                                      color: detecting
+                                          ? const Color(0xFF98989E)
+                                          : Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold)),
+                                if (detecting) ...[
+                                  const SizedBox(height: 2),
+                                  const Text(
+                                    'Please wait, fetching GPS…',
+                                    style: TextStyle(
+                                        color: Color(0xFF98989E), fontSize: 12),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
-                          if (_isDetectingLocation)
-                            const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFFE54F3F)),
-                            ),
                         ],
                       ),
                     ),
@@ -629,12 +730,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredGrounds = allGrounds.where((ground) {
+    // Re-sort whenever user position updates (allGrounds may still be unsorted
+    // if location arrived after the initial fetch).
+    final sortedGrounds = _sortByDistance(allGrounds);
+
+    final filteredGrounds = sortedGrounds.where((ground) {
       final matchesCategory = _selectedCategory == 'All' ||
-          ground['category'] == _selectedCategory;
-      final matchesSearch = ground['title']
-          .toLowerCase()
-          .contains(_searchQuery.toLowerCase());
+          (ground['type'] as String?)?.toLowerCase() ==
+              _selectedCategory.toLowerCase();
+      final name = (ground['title'] as String? ?? '').toLowerCase();
+      final matchesSearch = name.contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
 
@@ -668,28 +773,41 @@ class _DiscoverTabState extends State<DiscoverTab> {
               key: const ValueKey('discover_list'),
               child: Column(
                 children: [
-                  _buildHeader(),
-                  _buildTopSearch(),
-                  _buildChips(),
-                  const SizedBox(height: 12),
+                  _buildHeader(isWide: MediaQuery.of(context).size.width >= 720),
+                  _buildTopSearch(isWide: MediaQuery.of(context).size.width >= 720),
+                  _buildChips(isWide: MediaQuery.of(context).size.width >= 720),
+                  SizedBox(height: MediaQuery.of(context).size.width >= 720 ? 6 : 12),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final cols = constraints.maxWidth >= 1100
-                            ? 4
-                            : constraints.maxWidth >= 720
-                                ? 3
-                                : 2;
-                        final bottomPad =
-                            MediaQuery.of(context).size.width >= 720
-                                ? 24.0
-                                : 140.0;
+                        // Responsive column count based on available width:
+                        //  < 540  → 2  (phone portrait)
+                        //  540-719 → 3  (phone landscape)
+                        //  720-1099 → 4  (tablet / wide phone landscape)
+                        //  ≥ 1100  → 5  (large tablet / desktop)
+                        final w = constraints.maxWidth;
+                        final cols = w >= 1100 ? 5
+                            : w >= 720 ? 4
+                            : w >= 540 ? 3
+                            : 2;
+
+                        // Tighten spacing slightly for smaller cards
+                        final spacing = w >= 720 ? 14.0 : 12.0;
+
+                        // Aspect ratio: taller cards on portrait, more square on wide
+                        final aspectRatio = w >= 1100 ? 0.88
+                            : w >= 720 ? 0.82
+                            : w >= 540 ? 0.78
+                            : 0.66;
+
+                        final bottomPad = w >= 720 ? 24.0 : 140.0;
+
                         final gridDelegate =
                             SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: cols,
-                          crossAxisSpacing: 16.0,
-                          mainAxisSpacing: 16.0,
-                          childAspectRatio: 0.66,
+                          crossAxisSpacing: spacing,
+                          mainAxisSpacing: spacing,
+                          childAspectRatio: aspectRatio,
                         );
                         if (isLoading) {
                           return GridView.builder(
@@ -796,9 +914,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   // ─── Header ───────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader({bool isWide = false}) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: EdgeInsets.fromLTRB(16, isWide ? 8 : 16, 16, isWide ? 10 : 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -813,8 +931,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                     children: [
                       if (_isDetectingLocation)
                         Container(
-                          width: 36,
-                          height: 36,
+                          width: isWide ? 28 : 36,
+                          height: isWide ? 28 : 36,
                           decoration: BoxDecoration(
                             color: const Color(0xFFE54F3F)
                                 .withValues(alpha: 0.18),
@@ -838,8 +956,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                               curve: Curves.easeInOut,
                             ),
                       Container(
-                        width: 36,
-                        height: 36,
+                        width: isWide ? 30 : 36,
+                        height: isWide ? 30 : 36,
                         decoration: BoxDecoration(
                           color: _isDetectingLocation
                               ? const Color(0xFFE54F3F)
@@ -873,9 +991,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
                                 child: Text(
                                   _locationArea,
                                   key: ValueKey(_locationArea),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 18,
+                                    fontSize: isWide ? 15 : 18,
                                     fontWeight: FontWeight.bold,
                                   ),
                                   maxLines: 1,
@@ -894,8 +1012,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                           child: Text(
                             _locationAddress,
                             key: ValueKey(_locationAddress),
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
+                            style: TextStyle(
+                                color: Colors.white70, fontSize: isWide ? 11 : 13),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -913,12 +1031,14 @@ class _DiscoverTabState extends State<DiscoverTab> {
             child: Container(
               width: 40,
               height: 40,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2C2C2E),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2C2C2E),
                 shape: BoxShape.circle,
                 image: DecorationImage(
                   image: NetworkImage(
-                      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'),
+                    AuthService.currentUser?.profileImageUrl ??
+                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+                  ),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -931,11 +1051,11 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   // ─── Search ───────────────────────────────────────────────────────────────────
 
-  Widget _buildTopSearch() {
+  Widget _buildTopSearch({bool isWide = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 48,
+        height: isWide ? 40 : 48,
         decoration: BoxDecoration(
           color: const Color(0xFF323232),
           borderRadius: BorderRadius.circular(12),
@@ -943,16 +1063,14 @@ class _DiscoverTabState extends State<DiscoverTab> {
         child: Row(
           children: [
             const SizedBox(width: 16),
-            const Icon(Icons.search, color: Color(0xFF8E8E93), size: 22),
-            const SizedBox(width: 12),
+            const Icon(Icons.search, color: Color(0xFF8E8E93), size: 20),
+            const SizedBox(width: 10),
             Expanded(
               child: TextField(
-                style:
-                    const TextStyle(color: Colors.white, fontSize: 16),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Colors.white, fontSize: isWide ? 14 : 16),
+                decoration: InputDecoration(
                   hintText: 'Search by ground name or sport',
-                  hintStyle:
-                      TextStyle(color: Color(0xFF8E8E93), fontSize: 16),
+                  hintStyle: TextStyle(color: const Color(0xFF8E8E93), fontSize: isWide ? 14 : 16),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -969,60 +1087,79 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   // ─── Category chips ───────────────────────────────────────────────────────────
 
-  Widget _buildChips() {
-    return Container(
-      height: 70,
-      margin: const EdgeInsets.only(top: 24, bottom: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        itemCount: categoryData.length,
-        itemBuilder: (context, index) {
-          final data = categoryData[index];
-          final category = data['name'] as String;
-          final isSelected = category == _selectedCategory;
-          final color = isSelected
-              ? const Color(0xFFE54F3F)
-              : const Color(0xFF8E8E93);
+  Widget _buildChips({bool isWide = false}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sw = MediaQuery.of(context).size.width;
 
-          return GestureDetector(
-            onTap: () => setState(() => _selectedCategory = category),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: isSelected
-                        ? const Color(0xFFE54F3F)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(data['icon'] as IconData,
-                      color: color, size: 26),
-                  const SizedBox(height: 6),
-                  Text(
-                    category.toUpperCase(),
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w600,
-                      letterSpacing: 0.5,
+        // 4-tier sizing based on actual screen width
+        // < 540  (phone portrait):   compact
+        // 540-719 (phone landscape): medium
+        // 720-1099 (tablet):         large
+        // ≥ 1100  (desktop):         full
+        final double chipHeight   = sw >= 720 ? 52 : sw >= 540 ? 56 : 52;
+        final double topMargin    = sw >= 720 ? 10 : sw >= 540 ? 12 : 12;
+        final double bottomMargin = sw >= 720 ?  4 : sw >= 540 ?  6 :  4;
+        final double iconSize     = sw >= 720 ? 20 : sw >= 540 ? 20 : 18;
+        final double fontSize     = sw >= 720 ?  9 : sw >= 540 ?  9 :  9;
+        final double hMargin      = sw >= 720 ? 10 : sw >= 540 ? 10 : 8;
+        final double innerGap     = sw >= 720 ?  4 : sw >= 540 ?  4 :  3;
+
+        return Container(
+          height: chipHeight,
+          margin: EdgeInsets.only(top: topMargin, bottom: bottomMargin),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            itemCount: categoryData.length,
+            itemBuilder: (context, index) {
+              final data = categoryData[index];
+              final category = data['name'] as String;
+              final isSelected = category == _selectedCategory;
+              final color = isSelected
+                  ? const Color(0xFFE54F3F)
+                  : const Color(0xFF8E8E93);
+
+              return GestureDetector(
+                onTap: () => setState(() => _selectedCategory = category),
+                child: Container(
+                  margin: EdgeInsets.symmetric(horizontal: hMargin),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFFE54F3F)
+                            : Colors.transparent,
+                        width: 2,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(data['icon'] as IconData,
+                          color: color, size: iconSize),
+                      SizedBox(height: innerGap),
+                      Text(
+                        category.toUpperCase(),
+                        style: TextStyle(
+                          color: color,
+                          fontSize: fontSize,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(height: innerGap),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -1110,8 +1247,31 @@ class _DiscoverTabState extends State<DiscoverTab> {
               ),
             ],
           ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              const Icon(Icons.near_me, color: Color(0xFF6E6E73), size: 11),
+              const SizedBox(width: 4),
+              Text(
+                _groundDistance(ground),
+                style: const TextStyle(
+                    color: Color(0xFF6E6E73), fontSize: 11),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  /// Returns a real GPS-based distance string, or '—' if position unknown.
+  String _groundDistance(Map<String, dynamic> ground) {
+    if (_userLat == null || _userLng == null) return 'Distance unavailable';
+    final coords = _parseMapsUrl(ground['maps_url'] as String?);
+    if (coords == null) return '—';
+    final km = _haversineKm(_userLat!, _userLng!, coords.$1, coords.$2);
+    return km < 1.0
+        ? '${(km * 1000).round()} m away'
+        : '${km.toStringAsFixed(1)} km away';
   }
 }

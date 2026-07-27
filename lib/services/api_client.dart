@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
 
 class ApiException implements Exception {
@@ -75,7 +76,25 @@ class ApiClient {
   }) async {
     final request = http.MultipartRequest(method, Uri.parse('${AppConstants.apiBaseUrl}$path'));
     if (_token != null) request.headers['Authorization'] = 'Bearer $_token';
-    request.files.add(await http.MultipartFile.fromPath(fieldName, file.path));
+
+    // Derive MIME type from extension so we never send application/octet-stream,
+    // which the backend rejects.  ImagePicker temp files on Android sometimes
+    // have no extension, so we default to image/jpeg (the most common format).
+    final ext = file.path.split('.').last.toLowerCase();
+    final mimeType = switch (ext) {
+      'png'  => 'image/png',
+      'webp' => 'image/webp',
+      'gif'  => 'image/gif',
+      _      => 'image/jpeg',  // jpg / jpeg / unknown → safe default
+    };
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        fieldName,
+        file.path,
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);

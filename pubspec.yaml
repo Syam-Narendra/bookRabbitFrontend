@@ -39,6 +39,7 @@ dependencies:
   # Already bundled inside google_fonts package, no extra dep needed.
   image_picker: ^1.2.3
   http: ^1.6.0
+  http_parser: ^4.0.0
   carousel_slider: ^5.1.2
   razorpay_flutter: ^1.4.5
   url_launcher: ^6.3.2

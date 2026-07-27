@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/booking_service.dart';
 import '../booking_detail_screen.dart';
@@ -55,27 +56,6 @@ class _HistoryTabState extends State<HistoryTab> {
       );
     }
 
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFFE54F3F)));
-    }
-
-    if (_hasError) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Failed to load bookings', style: TextStyle(color: Colors.white70, fontSize: 16)),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _fetchBookings,
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE54F3F)),
-              child: const Text('Retry', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      );
-    }
-
     final mockBookings = _bookings;
     List<Map<String, dynamic>> displayedBookings = mockBookings;
     if (_selectedHistoryTab != 'All') {
@@ -95,7 +75,7 @@ class _HistoryTabState extends State<HistoryTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header — always visible
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   child: const Text(
@@ -103,17 +83,13 @@ class _HistoryTabState extends State<HistoryTab> {
                     style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
                   ).animate().fade(duration: 350.ms).slideX(begin: -0.05, end: 0, curve: Curves.easeOutCubic),
                 ),
-                
-                // Custom Tabs
+
+                // Filter tabs — always visible
                 Row(
                   children: historyTabs.map((tab) {
                     final isSelected = tab == _selectedHistoryTab;
                     return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedHistoryTab = tab;
-                        });
-                      },
+                      onTap: () => setState(() => _selectedHistoryTab = tab),
                       child: Container(
                         padding: const EdgeInsets.only(bottom: 8),
                         margin: const EdgeInsets.only(right: 24),
@@ -138,53 +114,144 @@ class _HistoryTabState extends State<HistoryTab> {
                   }).toList(),
                 ).animate().fade(delay: 100.ms, duration: 350.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic),
                 const SizedBox(height: 16),
-                
-                // Content List
+
+                // Content area — loading / error / list
                 Expanded(
-                  child: displayedBookings.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.calendar_today_outlined, color: Color(0xFF52525B), size: 48),
-                            const SizedBox(height: 16),
-                            Text(
-                              _selectedHistoryTab == 'All'
-                                  ? 'No bookings found.'
-                                  : 'No ${_selectedHistoryTab.toLowerCase()} bookings found.',
-                              style: const TextStyle(color: Color(0xFF98989E), fontSize: 16, fontWeight: FontWeight.w500),
+                  child: _isLoading
+                    ? _buildSkeletonList()
+                    : _hasError
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.wifi_off_rounded, color: Color(0xFF52525B), size: 48),
+                              const SizedBox(height: 16),
+                              const Text('Failed to load bookings',
+                                  style: TextStyle(color: Colors.white70, fontSize: 16)),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: _fetchBookings,
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFE54F3F)),
+                                child: const Text('Retry',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        )
+                      : displayedBookings.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.calendar_today_outlined,
+                                    color: Color(0xFF52525B), size: 48),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _selectedHistoryTab == 'All'
+                                      ? 'No bookings found.'
+                                      : 'No ${_selectedHistoryTab.toLowerCase()} bookings found.',
+                                  style: const TextStyle(
+                                      color: Color(0xFF98989E),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      )
-                    : ListView(
-                        padding: EdgeInsets.only(bottom: bottomPad),
-                        children: _selectedHistoryTab == 'All'
-                          ? [
-                              if (mockBookings.any((b) => b['status'] == 'Upcoming')) ...[
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                                  child: Text('Upcoming bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                                ).animate().fade(delay: 150.ms),
-                                ...mockBookings.where((b) => b['status'] == 'Upcoming').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
-                              ],
-                              if (mockBookings.any((b) => b['status'] == 'Completed')) ...[
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                                  child: Text('Completed bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                                ).animate().fade(delay: 150.ms),
-                                ...mockBookings.where((b) => b['status'] == 'Completed').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
-                              ],
-                              if (mockBookings.any((b) => b['status'] == 'Cancelled')) ...[
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                                  child: Text('Cancelled bookings', style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
-                                ).animate().fade(delay: 150.ms),
-                                ...mockBookings.where((b) => b['status'] == 'Cancelled').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
-                              ],
-                            ]
-                          : displayedBookings.asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)).toList(),
-                      ),
+                          )
+                        : ListView(
+                            padding: EdgeInsets.only(bottom: bottomPad),
+                            children: _selectedHistoryTab == 'All'
+                              ? [
+                                  if (mockBookings.any((b) => b['status'] == 'Upcoming')) ...[
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                                      child: Text('Upcoming bookings',
+                                          style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                    ).animate().fade(delay: 150.ms),
+                                    ...mockBookings.where((b) => b['status'] == 'Upcoming').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
+                                  ],
+                                  if (mockBookings.any((b) => b['status'] == 'Completed')) ...[
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                                      child: Text('Completed bookings',
+                                          style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                    ).animate().fade(delay: 150.ms),
+                                    ...mockBookings.where((b) => b['status'] == 'Completed').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
+                                  ],
+                                  if (mockBookings.any((b) => b['status'] == 'Cancelled')) ...[
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                                      child: Text('Cancelled bookings',
+                                          style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                    ).animate().fade(delay: 150.ms),
+                                    ...mockBookings.where((b) => b['status'] == 'Cancelled').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
+                                  ],
+                                ]
+                              : displayedBookings.asMap().entries
+                                  .map((entry) => _buildBookingCard(entry.value, entry.key))
+                                  .toList(),
+                          ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Shimmer skeleton list shown while bookings are loading.
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      itemCount: 5,
+      itemBuilder: (context, i) {
+        return Shimmer.fromColors(
+          baseColor: const Color(0xFF2C2C2E),
+          highlightColor: const Color(0xFF3A3A3C),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF222224),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                // image placeholder
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(height: 14, width: double.infinity, color: Colors.white),
+                      const SizedBox(height: 8),
+                      Container(height: 12, width: 100, color: Colors.white),
+                      const SizedBox(height: 8),
+                      Container(height: 12, width: 140, color: Colors.white),
+                      const SizedBox(height: 6),
+                      Container(height: 12, width: 100, color: Colors.white),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(height: 22, width: 70, color: Colors.white),
+                    const SizedBox(height: 16),
+                    Container(height: 12, width: 50, color: Colors.white),
+                    const SizedBox(height: 4),
+                    Container(height: 20, width: 60, color: Colors.white),
+                  ],
                 ),
               ],
             ),
@@ -228,12 +295,7 @@ class _HistoryTabState extends State<HistoryTab> {
           // Image
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              booking['imageUrl'],
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-            ),
+            child: _buildGroundImage(booking),
           ),
           const SizedBox(width: 16),
           // Details
@@ -305,5 +367,59 @@ class _HistoryTabState extends State<HistoryTab> {
       ),
       ),
     ).animate().fade(duration: 300.ms, delay: Duration(milliseconds: 100 + (index * 50))).slideY(begin: 0.1, duration: 300.ms, curve: Curves.easeOutCubic);
+  }
+  /// Returns a sport-appropriate bunny fallback asset path based on the ground type.
+  String _fallbackAsset(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('cricket')) return 'assets/images/cricket-rabbit.png';
+    if (t.contains('football') || t.contains('soccer')) return 'assets/images/football-rabbit.png';
+    if (t.contains('tennis') || t.contains('badminton') || t.contains('pickleball')) return 'assets/images/tennis-rabbit.png';
+    return 'assets/images/sports_bunnies.png';
+  }
+
+  /// Displays the ground image: asset path → Image.asset,
+  /// network URL → Image.network with error/loading builders.
+  Widget _buildGroundImage(Map<String, dynamic> booking) {
+    const double size = 80;
+    final imageUrl = booking['imageUrl'] as String? ?? '';
+    final type = booking['type'] as String? ?? '';
+    final fallback = _fallbackAsset(type);
+
+    // When the booking service put an asset path as the URL (no images from backend)
+    if (imageUrl.startsWith('assets/')) {
+      return Image.asset(imageUrl, width: size, height: size, fit: BoxFit.cover,
+        errorBuilder: (_, e, s) => Image.asset(fallback, width: size, height: size, fit: BoxFit.cover),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      // Show a shimmer-style placeholder while loading
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2C2C2E),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE54F3F)),
+            ),
+          ),
+        );
+      },
+      // Fall back to the bunny on any network/decode error
+      errorBuilder: (context, error, stackTrace) {
+        return Image.asset(fallback, width: size, height: size, fit: BoxFit.cover);
+      },
+    );
   }
 }
