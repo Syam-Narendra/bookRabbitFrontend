@@ -28,7 +28,6 @@ class _DiscoverTabState extends State<DiscoverTab> {
   List<Map<String, dynamic>> allGrounds = [];
   bool isLoading = true;
   bool hasError = false;
-  Map<String, dynamic>? _selectedGround;
 
   // Location state
   String _locationArea = 'Detecting...';
@@ -743,42 +742,12 @@ class _DiscoverTabState extends State<DiscoverTab> {
       return matchesCategory && matchesSearch;
     }).toList();
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 350),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.03),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-                parent: animation, curve: Curves.easeOutCubic)),
-            child: child,
-          ),
-        );
-      },
-      child: _selectedGround != null
-          ? KeyedSubtree(
-              key: ValueKey(_selectedGround!['id']),
-              child: GroundDetailsScreen(
-                ground: _selectedGround!,
-                onBackPressed: () =>
-                    setState(() => _selectedGround = null),
-              ),
-            )
-          : KeyedSubtree(
-              key: const ValueKey('discover_list'),
-              child: Column(
-                children: [
-                  _buildHeader(isWide: MediaQuery.of(context).size.width >= 720),
-                  _buildTopSearch(isWide: MediaQuery.of(context).size.width >= 720),
-                  _buildChips(isWide: MediaQuery.of(context).size.width >= 720),
-                  SizedBox(height: MediaQuery.of(context).size.width >= 720 ? 6 : 12),
-                  Expanded(
-                    child: LayoutBuilder(
+    return Column(
+      children: [
+        _buildHeader(isWide: MediaQuery.of(context).size.width >= 720),
+        _buildChips(isWide: MediaQuery.of(context).size.width >= 720),
+        Expanded(
+          child: LayoutBuilder(
                       builder: (context, constraints) {
                         // Responsive column count based on available width:
                         //  < 540  → 2  (phone portrait)
@@ -907,9 +876,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                     ),
                   ),
                 ],
-              ),
-            ),
-    );
+              );
   }
 
   // ─── Header ───────────────────────────────────────────────────────────────────
@@ -1168,7 +1135,14 @@ class _DiscoverTabState extends State<DiscoverTab> {
   Widget _buildGroundCard(
       BuildContext context, Map<String, dynamic> ground) {
     return GestureDetector(
-      onTap: () => setState(() => _selectedGround = ground),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GroundDetailsScreen(ground: ground),
+          ),
+        );
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

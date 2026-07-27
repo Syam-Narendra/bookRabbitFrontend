@@ -5,6 +5,8 @@ import 'screens/vendor_login_screen.dart';
 import 'screens/setup_profile_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/booking_success_screen.dart';
+import 'screens/terms_conditions_screen.dart';
+import 'screens/support_screen.dart';
 import 'services/auth_service.dart';
 import 'theme/app_typography.dart';
 
@@ -62,6 +64,8 @@ class MyApp extends StatelessWidget {
               endTime: '08:00 PM',
               finalPrice: 600,
             ),
+        '/terms': (context) => const TermsConditionsScreen(),
+        '/support': (context) => const SupportScreen(),
         '/home': (context) => AuthService.currentUser != null ? const HomeScreen() : const LoginScreen(),
       },
     );

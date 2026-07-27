@@ -20,8 +20,6 @@ class _HistoryTabState extends State<HistoryTab> {
   bool _isLoading = true;
   bool _hasError = false;
 
-  Map<String, dynamic>? _selectedBooking;
-
   @override
   void initState() {
     super.initState();
@@ -49,13 +47,6 @@ class _HistoryTabState extends State<HistoryTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedBooking != null) {
-      return BookingDetailScreen(
-        booking: _selectedBooking!,
-        onBackPressed: () => setState(() => _selectedBooking = null),
-      );
-    }
-
     final mockBookings = _bookings;
     List<Map<String, dynamic>> displayedBookings = mockBookings;
     if (_selectedHistoryTab != 'All') {
@@ -277,9 +268,12 @@ class _HistoryTabState extends State<HistoryTab> {
 
     return TouchableOpacity(
       onTap: () {
-        setState(() {
-          _selectedBooking = booking;
-        });
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingDetailScreen(booking: booking),
+          ),
+        );
       },
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),

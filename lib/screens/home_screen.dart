@@ -62,76 +62,83 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 720;
 
-    if (isWide) {
-      // Wide: persistent side rail + content
-      return Scaffold(
-        backgroundColor: const Color(0xFF161616),
-        body: Container(
-          color: const Color(0xFF161616),
-          child: Row(
-            children: [
-              // Side navigation rail matching exact mobile colors
-              NavigationRail(
-                backgroundColor: const Color(0xFF161616),
-                useIndicator: false,
-                indicatorColor: Colors.transparent,
-                selectedIndex: _currentIndex,
-                onDestinationSelected: (i) => setState(() => _currentIndex = i),
-                labelType: NavigationRailLabelType.all,
-                selectedIconTheme: const IconThemeData(color: Color(0xFFE54F3F), size: 26),
-                unselectedIconTheme: const IconThemeData(color: Color(0xFF98989E), size: 24),
-                selectedLabelTextStyle: const TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold, fontSize: 12),
-                unselectedLabelTextStyle: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
-                destinations: const [
-                  NavigationRailDestination(
-                    icon: Icon(Icons.book_outlined),
-                    selectedIcon: Icon(Icons.book),
-                    label: Text('Discover'),
+    final Widget scaffold = isWide
+        ? Scaffold(
+            backgroundColor: const Color(0xFF161616),
+            body: Container(
+              color: const Color(0xFF161616),
+              child: Row(
+                children: [
+                  // Side navigation rail matching exact mobile colors
+                  NavigationRail(
+                    backgroundColor: const Color(0xFF161616),
+                    useIndicator: false,
+                    indicatorColor: Colors.transparent,
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: (i) => setState(() => _currentIndex = i),
+                    labelType: NavigationRailLabelType.all,
+                    selectedIconTheme: const IconThemeData(color: Color(0xFFE54F3F), size: 26),
+                    unselectedIconTheme: const IconThemeData(color: Color(0xFF98989E), size: 24),
+                    selectedLabelTextStyle: const TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold, fontSize: 12),
+                    unselectedLabelTextStyle: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.book_outlined),
+                        selectedIcon: Icon(Icons.book),
+                        label: Text('Discover'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.history),
+                        selectedIcon: Icon(Icons.history),
+                        label: Text('History'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.person_outline),
+                        selectedIcon: Icon(Icons.person),
+                        label: Text('Account'),
+                      ),
+                    ],
                   ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.history),
-                    selectedIcon: Icon(Icons.history),
-                    label: Text('History'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(Icons.person),
-                    label: Text('Account'),
+                  const VerticalDivider(width: 1, color: Color(0xFF2C2C2E)),
+                  // Main content
+                  Expanded(
+                    child: SafeArea(
+                      child: _buildTabContent(),
+                    ),
                   ),
                 ],
               ),
-              const VerticalDivider(width: 1, color: Color(0xFF2C2C2E)),
-              // Main content
-              Expanded(
-                child: SafeArea(
-                  child: _buildTabContent(),
+            ),
+          )
+        : Scaffold(
+            backgroundColor: const Color(0xFF121212),
+            resizeToAvoidBottomInset: false,
+            body: Container(
+              color: const Color(0xFF161616),
+              child: SafeArea(
+                bottom: false,
+                child: Stack(
+                  children: [
+                    _buildTabContent(),
+                    Positioned(
+                      left: 0, right: 0, bottom: 0,
+                      child: _buildBottomOverlay(),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
+          );
 
-    // Narrow: original bottom nav
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      resizeToAvoidBottomInset: false,
-      body: Container(
-        color: const Color(0xFF161616),
-        child: SafeArea(
-          bottom: false,
-          child: Stack(
-            children: [
-              _buildTabContent(),
-              Positioned(
-                left: 0, right: 0, bottom: 0,
-                child: _buildBottomOverlay(),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+        }
+      },
+      child: scaffold,
     );
   }
 

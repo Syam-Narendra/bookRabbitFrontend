@@ -9,6 +9,8 @@ import '../../constants.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_client.dart';
 import '../../services/booking_service.dart';
+import '../terms_conditions_screen.dart';
+import '../support_screen.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -121,15 +123,15 @@ class _AccountTabState extends State<AccountTab> {
               contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               title: const Text('Confirm Logout',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               content: const Text('Are you sure you want to log out?',
-                  style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  style: TextStyle(color: Colors.white70, fontSize: 15)),
               actions: [
                 TextButton(
                   onPressed: isLoggingOut ? null : () => Navigator.pop(dialogContext),
                   child: Text('Cancel',
                       style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           color: isLoggingOut ? const Color(0xFF52525B) : const Color(0xFF98989E))),
                 ),
                 TextButton(
@@ -157,7 +159,7 @@ class _AccountTabState extends State<AccountTab> {
                         )
                       : const Text('Log Out',
                           style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 15,
                               color: Color(0xFFE54F3F),
                               fontWeight: FontWeight.bold)),
                 ),
@@ -183,15 +185,15 @@ class _AccountTabState extends State<AccountTab> {
               contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               title: const Text('Edit Name',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               content: TextField(
                 controller: _firstNameController,
                 enabled: !isSaving,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(color: Colors.white, fontSize: 15),
                 cursorColor: const Color(0xFFE54F3F),
                 decoration: const InputDecoration(
                   hintText: 'Enter your first name',
-                  hintStyle: TextStyle(color: Color(0xFF98989E), fontSize: 13),
+                  hintStyle: TextStyle(color: Color(0xFF98989E), fontSize: 14),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Color(0xFF2C2C2E)),
                   ),
@@ -206,7 +208,7 @@ class _AccountTabState extends State<AccountTab> {
                   child: Text(
                     'Cancel',
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 15,
                         color: isSaving ? const Color(0xFF52525B) : const Color(0xFF98989E)),
                   ),
                 ),
@@ -255,7 +257,7 @@ class _AccountTabState extends State<AccountTab> {
                       : const Text(
                           'Save',
                           style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 15,
                               color: Color(0xFFE54F3F),
                               fontWeight: FontWeight.bold),
                         ),
@@ -540,17 +542,17 @@ class _AccountTabState extends State<AccountTab> {
   Widget _buildMenuOptions() {
     return Column(
       children: [
-        _buildMenuOption('Help & Support', Icons.help_outline, onTap: () async {
-          final url = Uri.parse('${AppConstants.apiBaseUrl}/support');
-          if (await canLaunchUrl(url)) {
-            await launchUrl(url);
-          }
+        _buildMenuOption('Help & Support', Icons.help_outline, onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SupportScreen()),
+          );
         }).animate().fade(delay: 500.ms).slideY(begin: 0.1),
-        _buildMenuOption('Terms & Conditions', Icons.description_outlined, onTap: () async {
-          final url = Uri.parse('${AppConstants.apiBaseUrl}/terms');
-          if (await canLaunchUrl(url)) {
-            await launchUrl(url);
-          }
+        _buildMenuOption('Terms & Conditions', Icons.description_outlined, onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const TermsConditionsScreen()),
+          );
         }).animate().fade(delay: 550.ms).slideY(begin: 0.1),
         _buildMenuOption('Log Out', Icons.logout, isDestructive: true, onTap: _logout).animate().fade(delay: 600.ms).slideY(begin: 0.1),
       ],
