@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/vendor_login_screen.dart';
@@ -30,7 +31,13 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF121212),
         primaryColor: const Color(0xFFFF4B3A),
+        fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
         textTheme: AppTypography.textTheme.apply(
+          bodyColor: Colors.white,
+          displayColor: Colors.white,
+          decorationColor: Colors.white,
+        ),
+        primaryTextTheme: AppTypography.textTheme.apply(
           bodyColor: Colors.white,
           displayColor: Colors.white,
           decorationColor: Colors.white,
@@ -38,6 +45,19 @@ class MyApp extends StatelessWidget {
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFFFF4B3A),
           surface: Color(0xFF1C1C1E),
+          error: Color(0xFFD32F2F),
+          onError: Colors.white,
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: const Color(0xFFD32F2F),
+          contentTextStyle: GoogleFonts.plusJakartaSans(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          actionTextColor: Colors.white,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: <TargetPlatform, PageTransitionsBuilder>{

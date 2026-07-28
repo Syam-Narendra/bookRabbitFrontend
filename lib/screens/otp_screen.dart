@@ -127,7 +127,10 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter the 6-digit OTP.'), backgroundColor: Colors.redAccent));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please enter the 6-digit OTP.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: Color(0xFFD32F2F),
+      ));
       return;
     }
     setState(() => _isVerifying = true);
@@ -143,7 +146,10 @@ class _OtpScreenState extends State<OtpScreen> {
       if (!mounted) return;
       for (final c in _controllers) c.clear();
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFFD32F2F),
+      ));
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }

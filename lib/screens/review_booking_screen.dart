@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../services/booking_service.dart';
+import '../services/razorpay_web/razorpay_web_helper.dart';
 import '../widgets/touchable_opacity.dart';
 import 'booking_success_screen.dart';
 
@@ -91,15 +93,83 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
           'name': AuthService.currentUser?.fullName ?? '',
         },
       };
-      _razorpay.open(options);
+
+      if (kIsWeb) {
+        launchRazorpayWebCheckout(
+          options: options,
+          onSuccess: (paymentId, orderId, signature) {
+            _onWebPaymentSuccess(paymentId, orderId, signature);
+          },
+          onError: (code, message) {
+            _onWebPaymentError(message);
+          },
+        );
+      } else {
+        _razorpay.open(options);
+      }
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+        SnackBar(
+          content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          backgroundColor: const Color(0xFFD32F2F),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isCreatingOrder = false);
     }
+  }
+
+  Future<void> _onWebPaymentSuccess(String paymentId, String orderId, String signature) async {
+    try {
+      final referenceId = await BookingService.verifyPayment(
+        razorpayPaymentId: paymentId,
+        razorpayOrderId: orderId,
+        razorpaySignature: signature,
+      );
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookingSuccessScreen(
+            referenceId: referenceId,
+            ground: widget.ground,
+            date: widget.date,
+            startTime: widget.startTime,
+            endTime: widget.endTime,
+            finalPrice: widget.finalPrice,
+          ),
+        ),
+        (route) => route.isFirst,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          backgroundColor: const Color(0xFFD32F2F),
+        ),
+      );
+    }
+  }
+
+  void _onWebPaymentError(String message) {
+    final order = _order;
+    if (order != null) {
+      BookingService.releaseSlot(
+        groundId: widget.ground['id'] as String,
+        date: DateFormat('yyyy-MM-dd').format(widget.date),
+        startTime: _to24Hour(widget.startTime),
+        endTime: _to24Hour(widget.endTime),
+        holdId: order.holdId,
+      );
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Payment Failed: $message', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFFD32F2F),
+      ),
+    );
   }
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
@@ -127,7 +197,10 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+        SnackBar(
+          content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          backgroundColor: const Color(0xFFD32F2F),
+        ),
       );
     }
   }
@@ -144,7 +217,10 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       );
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Payment Failed: ${response.message}'), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text('Payment Failed: ${response.message}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFFD32F2F),
+      ),
     );
   }
 

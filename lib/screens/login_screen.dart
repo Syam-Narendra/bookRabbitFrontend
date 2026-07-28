@@ -217,8 +217,8 @@ class _LoginScreenState extends State<LoginScreen> {
               : () async {
                   if (phoneController.text.length != 10) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Please enter a valid 10-digit mobile number.'),
-                      backgroundColor: Colors.redAccent,
+                      content: Text('Please enter a valid 10-digit mobile number.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      backgroundColor: Color(0xFFD32F2F),
                     ));
                     return;
                   }
@@ -229,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (!context.mounted) return;
                     if (devOtp != null) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('DEV OTP: $devOtp'),
+                        content: Text('DEV OTP: $devOtp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                         backgroundColor: Colors.black87,
                         duration: const Duration(seconds: 6),
                       ));
@@ -237,7 +237,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => OtpScreen(phone: phone)));
                   } on ApiException catch (e) {
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      backgroundColor: const Color(0xFFD32F2F),
+                    ));
                   } finally {
                     if (context.mounted) setState(() => _isSubmitting = false);
                   }
