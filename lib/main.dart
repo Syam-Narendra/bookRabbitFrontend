@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/vendor_login_screen.dart';
 import 'screens/setup_profile_screen.dart';
@@ -11,15 +13,13 @@ import 'services/auth_service.dart';
 import 'theme/app_typography.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final isLoggedIn = await AuthService.restoreSession();
-  runApp(MyApp(isLoggedIn: isLoggedIn));
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final bool isLoggedIn;
-
-  const MyApp({super.key, required this.isLoggedIn});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
+      home: const SplashScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/vendor_login': (context) => const VendorLoginScreen(),
