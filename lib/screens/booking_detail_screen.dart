@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../theme/app_theme.dart';
 
 class BookingDetailScreen extends StatelessWidget {
   final Map<String, dynamic> booking;
@@ -59,7 +60,7 @@ class BookingDetailScreen extends StatelessWidget {
     final statusColor = _statusColor();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF161616),
+      backgroundColor: context.bgColor,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -72,9 +73,9 @@ class BookingDetailScreen extends StatelessWidget {
                   child: Container(
                     constraints: const BoxConstraints(maxWidth: 680),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1C1C1E),
+                      color: context.cardBg,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFF2C2C2E)),
+                      border: Border.all(color: context.borderColor),
                     ),
                     padding: const EdgeInsets.all(28),
                     child: Column(
@@ -85,7 +86,7 @@ class BookingDetailScreen extends StatelessWidget {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                              icon: Icon(Icons.arrow_back_ios_new, color: context.textColor, size: 20),
                               onPressed: () {
                                 if (onBackPressed != null) {
                                   onBackPressed!();
@@ -98,7 +99,7 @@ class BookingDetailScreen extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 booking['title']?.toString() ?? '',
-                                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: context.textColor, fontSize: 22, fontWeight: FontWeight.bold),
                               ),
                             ),
                             Container(
@@ -119,31 +120,31 @@ class BookingDetailScreen extends StatelessWidget {
                         const SizedBox(height: 20),
                         Text(
                           booking['type']?.toString() ?? '',
-                          style: const TextStyle(color: Color(0xFF98989E), fontSize: 14),
+                          style: TextStyle(color: context.subTextColor, fontSize: 14),
                         ),
                         const SizedBox(height: 12),
                         if ((booking['address'] as String?)?.isNotEmpty == true)
-                          _buildDetailRow(Icons.location_on, booking['address'].toString()),
+                          _buildDetailRow(context, Icons.location_on, booking['address'].toString()),
                         const SizedBox(height: 20),
                         // Booking Details
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141416),
+                            color: context.subCardBg,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF2C2C2E)),
+                            border: Border.all(color: context.borderColor),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('BOOKING DETAILS', style: TextStyle(color: Color(0xFF98989E), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                              Text('BOOKING DETAILS', style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                               const SizedBox(height: 12),
-                              _buildDetailRow(Icons.calendar_today, booking['date']?.toString() ?? ''),
+                              _buildDetailRow(context, Icons.calendar_today, booking['date']?.toString() ?? ''),
                               const SizedBox(height: 10),
-                              _buildDetailRow(Icons.schedule, booking['time']?.toString() ?? ''),
+                              _buildDetailRow(context, Icons.schedule, booking['time']?.toString() ?? ''),
                               if ((booking['referenceId'] as String?)?.isNotEmpty == true) ...[
                                 const SizedBox(height: 10),
-                                _buildDetailRow(Icons.confirmation_number_outlined, booking['referenceId'].toString()),
+                                _buildDetailRow(context, Icons.confirmation_number_outlined, booking['referenceId'].toString()),
                               ],
                             ],
                           ),
@@ -153,20 +154,20 @@ class BookingDetailScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141416),
+                            color: context.subCardBg,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF2C2C2E)),
+                            border: Border.all(color: context.borderColor),
                           ),
                           child: Column(
                             children: [
-                              _buildPaymentRow('Ground Fare', booking['fare']),
+                              _buildPaymentRow(context, 'Ground Fare', booking['fare']),
                               const SizedBox(height: 12),
-                              _buildPaymentRow('Platform Fee', booking['platformFee']),
-                              const Divider(color: Color(0xFF2C2C2E), height: 28),
+                              _buildPaymentRow(context, 'Platform Fee', booking['platformFee']),
+                              Divider(color: context.borderColor, height: 28),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Total Amount', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                  Text('Total Amount', style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold)),
                                   Text(
                                     '₹${(booking['totalAmount'] as num?)?.round() ?? 0}',
                                     style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 18, fontWeight: FontWeight.bold),
@@ -189,7 +190,7 @@ class BookingDetailScreen extends StatelessWidget {
                 SliverAppBar(
                   expandedHeight: 220.0,
                   pinned: true,
-                  backgroundColor: const Color(0xFF161616),
+                  backgroundColor: context.bgColor,
                   leading: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
@@ -223,7 +224,7 @@ class BookingDetailScreen extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 booking['title']?.toString() ?? '',
-                                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: context.textColor, fontSize: 22, fontWeight: FontWeight.bold),
                               ),
                             ),
                             Container(
@@ -242,30 +243,30 @@ class BookingDetailScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           booking['type']?.toString() ?? '',
-                          style: const TextStyle(color: Color(0xFF98989E), fontSize: 14),
+                          style: TextStyle(color: context.subTextColor, fontSize: 14),
                         ).animate().fade(delay: 100.ms, duration: 350.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic),
                         const SizedBox(height: 16),
                         if ((booking['address'] as String?)?.isNotEmpty == true)
-                          _buildDetailRow(Icons.location_on, booking['address'].toString()).animate().fade(delay: 150.ms, duration: 350.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic),
+                          _buildDetailRow(context, Icons.location_on, booking['address'].toString()).animate().fade(delay: 150.ms, duration: 350.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic),
                         const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1C1C1E),
+                            color: context.cardBg,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF2C2C2E)),
+                            border: Border.all(color: context.borderColor),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('BOOKING DETAILS', style: TextStyle(color: Color(0xFF98989E), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                              Text('BOOKING DETAILS', style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                               const SizedBox(height: 12),
-                              _buildDetailRow(Icons.calendar_today, booking['date']?.toString() ?? ''),
+                              _buildDetailRow(context, Icons.calendar_today, booking['date']?.toString() ?? ''),
                               const SizedBox(height: 10),
-                              _buildDetailRow(Icons.schedule, booking['time']?.toString() ?? ''),
+                              _buildDetailRow(context, Icons.schedule, booking['time']?.toString() ?? ''),
                               if ((booking['referenceId'] as String?)?.isNotEmpty == true) ...[
                                 const SizedBox(height: 10),
-                                _buildDetailRow(Icons.confirmation_number_outlined, booking['referenceId'].toString()),
+                                _buildDetailRow(context, Icons.confirmation_number_outlined, booking['referenceId'].toString()),
                               ],
                             ],
                           ),
@@ -274,20 +275,20 @@ class BookingDetailScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1C1C1E),
+                            color: context.cardBg,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF2C2C2E)),
+                            border: Border.all(color: context.borderColor),
                           ),
                           child: Column(
                             children: [
-                              _buildPaymentRow('Ground Fare', booking['fare']),
+                              _buildPaymentRow(context, 'Ground Fare', booking['fare']),
                               const SizedBox(height: 12),
-                              _buildPaymentRow('Platform Fee', booking['platformFee']),
-                              const Divider(color: Color(0xFF2C2C2E), height: 28),
+                              _buildPaymentRow(context, 'Platform Fee', booking['platformFee']),
+                              Divider(color: context.borderColor, height: 28),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Total Amount', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                  Text('Total Amount', style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold)),
                                   Text(
                                     '₹${(booking['totalAmount'] as num?)?.round() ?? 0}',
                                     style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 18, fontWeight: FontWeight.bold),
@@ -309,26 +310,27 @@ class BookingDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String text) {
+  Widget _buildDetailRow(BuildContext context, IconData icon, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: const Color(0xFFE54F3F), size: 16),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text(text, style: TextStyle(color: context.textColor, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
       ],
     );
   }
 
-  Widget _buildPaymentRow(String label, dynamic amount) {
+  Widget _buildPaymentRow(BuildContext context, String label, dynamic amount) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-        Text('₹${(amount as num?)?.round() ?? 0}', style: const TextStyle(color: Colors.white, fontSize: 14)),
+        Text(label, style: TextStyle(color: context.subTextColor, fontSize: 14)),
+        Text('₹${(amount as num?)?.round() ?? 0}', style: TextStyle(color: context.textColor, fontSize: 14)),
       ],
     );
   }
 }
+

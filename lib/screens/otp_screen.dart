@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
+import '../theme/app_theme.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
@@ -26,11 +27,16 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final heroGradientColors = context.isDark
+        ? [const Color(0xFF2C1C16), const Color(0xFF1E1410)]
+        : [const Color(0xFFFFF7F2), const Color(0xFFFFEAE0)];
+
     return Scaffold(
+      backgroundColor: context.bgColor,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFFFF7F2), Color(0xFFFFEAE0)],
+            colors: heroGradientColors,
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -48,9 +54,9 @@ class _OtpScreenState extends State<OtpScreen> {
                       alignment: Alignment.centerLeft,
                       child: GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: const Padding(
-                          padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                          child: Icon(Icons.arrow_back, color: Color(0xFF1C1C1E), size: 26),
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                          child: Icon(Icons.arrow_back, color: context.textColor, size: 26),
                         ),
                       ),
                     ).animate().fade().slideX(begin: -0.2),
@@ -60,10 +66,10 @@ class _OtpScreenState extends State<OtpScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Enter OTP', style: TextStyle(color: Color(0xFF1C1C1E), fontSize: 32, fontWeight: FontWeight.bold))
+                              Text('Enter OTP', style: TextStyle(color: context.textColor, fontSize: 32, fontWeight: FontWeight.bold))
                                   .animate().fade(delay: 100.ms).slideY(begin: 0.1),
                               const SizedBox(height: 8),
-                              Text('Sent to +91 ${widget.phone}', style: const TextStyle(color: Color(0xFF666666), fontSize: 16))
+                              Text('Sent to +91 ${widget.phone}', style: TextStyle(color: context.subTextColor, fontSize: 16))
                                   .animate().fade(delay: 150.ms),
                               const SizedBox(height: 40),
                               Row(
@@ -108,9 +114,9 @@ class _OtpScreenState extends State<OtpScreen> {
                               child: const Text('B', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                             ),
                             const SizedBox(width: 6),
-                            const Text('Book Rabbit', style: TextStyle(color: Color(0xFF666666), fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text('Book Rabbit', style: TextStyle(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.w600)),
                           ]),
-                          const Text('A Rabbit product', style: TextStyle(color: Color(0xFF999999), fontSize: 12)),
+                          Text('A Rabbit product', style: TextStyle(color: context.subTextColor, fontSize: 12)),
                         ],
                       ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                     ),
@@ -160,10 +166,10 @@ class _OtpScreenState extends State<OtpScreen> {
     Widget box = Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardBg,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: hasText ? const Color(0xFFFF5200) : const Color(0xFFE0E0E0),
+          color: hasText ? const Color(0xFFFF5200) : context.borderColor,
           width: hasText ? 2.0 : 1.2,
         ),
         boxShadow: [
@@ -181,12 +187,12 @@ class _OtpScreenState extends State<OtpScreen> {
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           maxLength: 1,
-          style: const TextStyle(color: Color(0xFF1C1C1E), fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(color: context.textColor, fontSize: 24, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
             counterText: '',
             border: InputBorder.none,
             hintText: '•',
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 24),
+            hintStyle: TextStyle(color: context.subTextColor, fontSize: 24),
           ),
           onChanged: (value) {
             setState(() {});
@@ -197,8 +203,9 @@ class _OtpScreenState extends State<OtpScreen> {
       ),
     );
     if (_isVerifying) {
-      box = Shimmer.fromColors(baseColor: const Color(0xFFE0E0E0), highlightColor: Colors.white, child: box);
+      box = Shimmer.fromColors(baseColor: context.subCardBg, highlightColor: context.cardBg, child: box);
     }
     return box.animate().fade(delay: Duration(milliseconds: 200 + (index * 50))).slideY(begin: 0.1);
   }
 }
+

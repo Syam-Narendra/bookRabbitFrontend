@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
+import '../theme/app_theme.dart';
 import 'otp_screen.dart';
 import '../widgets/touchable_opacity.dart';
 
@@ -31,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: context.bgColor,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -79,12 +81,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    // Right — form (solid white background like vendor login)
+                    // Right — form
                     Expanded(
                       flex: 4,
                       child: Container(
                         height: double.infinity,
-                        color: Colors.white,
+                        color: context.cardBg,
                         child: Center(
                           child: SingleChildScrollView(
                             child: Padding(
@@ -94,15 +96,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text('Welcome!', style: GoogleFonts.plusJakartaSans(fontSize: 32, color: Colors.black, fontWeight: FontWeight.bold))
+                                    Text('Welcome!', style: GoogleFonts.plusJakartaSans(fontSize: 32, color: context.textColor, fontWeight: FontWeight.bold))
                                         .animate().fade(delay: 400.ms).slideY(begin: 0.1),
                                     const SizedBox(height: 10),
                                     Text('Book Rabbit lets you instantly book your favourite sports grounds.',
                                         textAlign: TextAlign.center,
-                                        style: GoogleFonts.plusJakartaSans(fontSize: 15, color: Colors.grey[600], height: 1.5))
+                                        style: GoogleFonts.plusJakartaSans(fontSize: 15, color: context.subTextColor, height: 1.5))
                                         .animate().fade(delay: 450.ms).slideY(begin: 0.1),
                                     const SizedBox(height: 30),
-                                    _buildForm(context, isWhiteBg: true),
+                                    _buildForm(context),
                                   ],
                                 ),
                               ),
@@ -114,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 );
               }
-              // Narrow — stacked with bottom white container like vendor login
+              // Narrow — stacked with bottom container
               return Column(
                 children: [
                   const SizedBox(height: 20),
@@ -140,23 +142,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 20),
                   Container(
                     width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                    decoration: BoxDecoration(
+                      color: context.cardBg,
+                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Welcome!', style: GoogleFonts.plusJakartaSans(fontSize: 28, color: Colors.black, fontWeight: FontWeight.bold))
+                        Text('Welcome!', style: GoogleFonts.plusJakartaSans(fontSize: 28, color: context.textColor, fontWeight: FontWeight.bold))
                             .animate().fade(delay: 400.ms).slideY(begin: 0.1),
                         const SizedBox(height: 8),
                         Text('Book Rabbit lets you instantly book your favourite sports grounds.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[600], height: 1.4))
+                            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: context.subTextColor, height: 1.4))
                             .animate().fade(delay: 450.ms).slideY(begin: 0.1),
                         const SizedBox(height: 24),
-                        _buildForm(context, isWhiteBg: true),
+                        _buildForm(context),
                       ],
                     ),
                   ),
@@ -169,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildForm(BuildContext context, {bool isWhiteBg = true}) {
+  Widget _buildForm(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -178,31 +180,31 @@ class _LoginScreenState extends State<LoginScreen> {
           keyboardType: TextInputType.phone,
           maxLength: 10,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+          style: TextStyle(color: context.textColor, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             counterText: '',
             filled: true,
-            fillColor: isWhiteBg ? const Color(0xFFF8F9FA) : Colors.white,
+            fillColor: context.subCardBg,
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 16, right: 8),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text('🇮🇳', style: TextStyle(fontSize: 20)),
-                  SizedBox(width: 8),
-                  Text('+91', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                children: [
+                  const Text('🇮🇳', style: TextStyle(fontSize: 20)),
+                  const SizedBox(width: 8),
+                  Text('+91', style: TextStyle(color: context.textColor, fontWeight: FontWeight.bold, fontSize: 16)),
                 ],
               ),
             ),
             hintText: 'Enter mobile number',
-            hintStyle: TextStyle(color: Colors.grey[400]),
+            hintStyle: TextStyle(color: context.subTextColor),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: isWhiteBg ? const Color(0xFFE0E0E0) : Colors.transparent),
+              borderSide: BorderSide(color: context.borderColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: isWhiteBg ? const Color(0xFFE0E0E0) : Colors.transparent),
+              borderSide: BorderSide(color: context.borderColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -274,3 +276,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

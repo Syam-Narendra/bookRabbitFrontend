@@ -7,11 +7,10 @@ import 'package:http/http.dart' as http;
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
-// geocoding is NOT supported on web — we use Nominatim for web instead
-import 'package:geocoding/geocoding.dart';
 import '../ground_details_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/ground_service.dart';
+import '../../theme/app_theme.dart';
 
 class DiscoverTab extends StatefulWidget {
   final VoidCallback? onProfileTapped;
@@ -43,215 +42,187 @@ class _DiscoverTabState extends State<DiscoverTab> {
     {'name': 'All', 'icon': Icons.auto_awesome},
     {'name': 'Cricket', 'icon': Icons.sports_cricket},
     {'name': 'Football', 'icon': Icons.sports_soccer},
+    {'name': 'Badminton', 'icon': Icons.sports_tennis},
+    {'name': 'Tennis', 'icon': Icons.sports_tennis},
     {'name': 'Pickleball', 'icon': Icons.sports_tennis},
     {'name': 'Basketball', 'icon': Icons.sports_basketball},
-    {'name': 'Badminton', 'icon': Icons.sports_tennis},
     {'name': 'Volleyball', 'icon': Icons.sports_volleyball},
+    {'name': 'Swimming', 'icon': Icons.pool},
   ];
+
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _fetchGrounds();
-    _initLocationDetection();
+    _initLocation();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _positionStream?.cancel();
     super.dispose();
   }
 
-  // ─── Location Logic ──────────────────────────────────────────────────────────
+  // ─── Location & Distance ───────────────────────────────────────────────────
 
-  Future<void> _initLocationDetection() async {
+  /// Request permission, start stream and do an initial fetch
+  Future<void> _initLocation() async {
     setState(() => _isDetectingLocation = true);
-
-    // On web, isLocationServiceEnabled is not implemented — skip it
-    if (!kIsWeb) {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _setLocationFallback('Location services off');
+    try {
+      final hasPermission = await _requestLocationPermission();
+      if (!hasPermission) {
+        _setLocationFallback('Hyderabad');
         return;
       }
+      // Quick first fix
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null && mounted) {
+        _userLat = lastPos.latitude;
+        _userLng = lastPos.longitude;
+        _reverseGeocode(lastPos);
+      }
+      final currentPos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _userLat = currentPos.latitude;
+          _userLng = currentPos.longitude;
+        });
+        await _reverseGeocode(currentPos);
+      }
+      _startLocationStream();
+    } catch (_) {
+      _setLocationFallback('Hyderabad');
+    } finally {
+      if (mounted) setState(() => _isDetectingLocation = false);
     }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      _setLocationFallback('Location access denied');
-      if (!kIsWeb) _showPermissionDeniedBanner();
-      return;
-    }
-
-    _startLocationStream();
   }
 
   void _startLocationStream() {
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.medium,
-      distanceFilter: 100, // update every 100 metres
+    const settings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 100, // notify every 100 metres
     );
-
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen(
-      (Position position) {
-        // Store coordinates for distance calculation
-        if (mounted) {
-          setState(() {
-            _userLat = position.latitude;
-            _userLng = position.longitude;
-          });
-        }
-        _reverseGeocode(position);
-      },
-      onError: (_) => _setLocationFallback('Unable to detect'),
-    );
+    _positionStream = Geolocator.getPositionStream(locationSettings: settings)
+        .listen((position) {
+      if (!mounted) return;
+      setState(() {
+        _userLat = position.latitude;
+        _userLng = position.longitude;
+      });
+      _reverseGeocode(position);
+    });
   }
 
-  /// Reverse geocode using [geocoding] on mobile, Nominatim on web.
-  Future<void> _reverseGeocode(Position position) async {
-    try {
-      if (kIsWeb) {
-        await _reverseGeocodeWeb(position.latitude, position.longitude);
-      } else {
-        await _reverseGeocodeMobile(position.latitude, position.longitude);
+  Future<bool> _requestLocationPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _setLocationFallback('Location disabled');
+      return false;
+    }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _setLocationFallback('Permission denied');
+        return false;
       }
-    } catch (_) {
-      _setLocationFallback('Could not resolve address');
     }
-  }
-
-  Future<void> _reverseGeocodeMobile(double lat, double lng) async {
-    final placemarks =
-        await Geocoding().placemarkFromCoordinates(lat, lng);
-    if (placemarks.isNotEmpty) {
-      final p = placemarks.first;
-      final area = p.subLocality?.isNotEmpty == true
-          ? p.subLocality!
-          : p.locality?.isNotEmpty == true
-              ? p.locality!
-              : 'Current Location';
-      final address = [p.locality, p.administrativeArea, p.country]
-          .where((s) => s != null && s.isNotEmpty)
-          .join(', ');
-
-      if (!mounted) return;
-      setState(() {
-        _userLat = lat;
-        _userLng = lng;
-        _locationArea = area;
-        _locationAddress = address.isNotEmpty ? address : 'Location detected';
-        _isDetectingLocation = false;
-      });
+    if (permission == LocationPermission.deniedForever) {
+      _setLocationFallback('Permission denied');
+      _showPermissionDeniedBanner();
+      return false;
     }
-  }
-
-  /// Uses OpenStreetMap Nominatim (no API key, CORS-friendly) for web.
-  Future<void> _reverseGeocodeWeb(double lat, double lng) async {
-    final url = Uri.parse(
-      'https://nominatim.openstreetmap.org/reverse'
-      '?format=jsonv2&lat=$lat&lon=$lng&accept-language=en',
-    );
-
-    final response = await http.get(
-      url,
-      headers: {'User-Agent': 'BookRabbit/1.0'},
-    ).timeout(const Duration(seconds: 6));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final addr = data['address'] as Map<String, dynamic>? ?? {};
-
-      // Prefer suburb > city_district > city > town > county
-      final area = (addr['suburb'] as String?)?.isNotEmpty == true
-          ? addr['suburb'] as String
-          : (addr['city_district'] as String?)?.isNotEmpty == true
-              ? addr['city_district'] as String
-              : (addr['city'] as String?)?.isNotEmpty == true
-                  ? addr['city'] as String
-                  : (addr['town'] as String?)?.isNotEmpty == true
-                      ? addr['town'] as String
-                      : (addr['county'] as String?) ?? 'Current Location';
-
-      final city = (addr['city'] as String?) ??
-          (addr['town'] as String?) ??
-          (addr['county'] as String?) ??
-          '';
-      final state = (addr['state'] as String?) ?? '';
-      final country = (addr['country'] as String?) ?? '';
-
-      final addressStr = [city, state, country]
-          .where((s) => s.isNotEmpty)
-          .join(', ');
-
-      if (!mounted) return;
-      setState(() {
-        _userLat = lat;
-        _userLng = lng;
-        _locationArea = area;
-        _locationAddress = addressStr.isNotEmpty ? addressStr : 'Location detected';
-        _isDetectingLocation = false;
-      });
-    } else {
-      throw Exception('Nominatim error: ${response.statusCode}');
-    }
+    return true;
   }
 
   void _setLocationFallback(String reason) {
     if (!mounted) return;
     setState(() {
-      _locationArea = 'Select Location';
-      _locationAddress = reason;
+      _locationArea = 'Hyderabad';
+      _locationAddress = 'Telangana, India • $reason';
       _isDetectingLocation = false;
     });
   }
 
-  /// Re-detect once (called from the bottom sheet).
-  /// [closeSheet] is called when detection is complete (success or failure)
-  /// so the sheet knows when to dismiss itself.
-  Future<void> _detectOnce({VoidCallback? closeSheet}) async {
-    setState(() => _isDetectingLocation = true);
+  /// Reverse geocode position to locality / area name.
+  /// On Web, geocoding package throws UnimplementedError — fallback to Nominatim HTTP API.
+  Future<void> _reverseGeocode(Position pos) async {
+    await _reverseGeocodeWeb(pos.latitude, pos.longitude);
+  }
 
-    if (!kIsWeb) {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _setLocationFallback('Location services off');
-        closeSheet?.call();
-        return;
-      }
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      _setLocationFallback('Location access denied');
-      closeSheet?.call();
-      return;
-    }
-
+  /// Nominatim reverse geocoding API for web / fallback
+  Future<void> _reverseGeocodeWeb(double lat, double lng) async {
     try {
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
-        ),
-      );
-      // Store coordinates immediately — distances update before geocoding
-      if (mounted) {
+      final url = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=14');
+      final res = await http.get(url, headers: {'User-Agent': 'BookRabbitApp/1.0'}).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200 && mounted) {
+        final data = json.decode(res.body) as Map<String, dynamic>;
+        final addr = data['address'] as Map<String, dynamic>? ?? {};
+        final area = (addr['suburb'] as String?)?.isNotEmpty == true
+            ? addr['suburb'] as String
+            : (addr['city_district'] as String?)?.isNotEmpty == true
+                ? addr['city_district'] as String
+                : (addr['city'] as String?)?.isNotEmpty == true
+                    ? addr['city'] as String
+                    : (addr['town'] as String?) ?? 'Current Location';
+        final city = (addr['city'] as String?) ?? (addr['town'] as String?) ?? '';
+        final state = (addr['state'] as String?) ?? '';
+        final fullAddress = [city, state].where((s) => s.isNotEmpty).join(', ');
         setState(() {
-          _userLat = position.latitude;
-          _userLng = position.longitude;
+          _locationArea = area;
+          _locationAddress = fullAddress.isNotEmpty ? fullAddress : 'Detected via GPS';
         });
       }
-      await _reverseGeocode(position);
+    } catch (_) {
+      if (mounted && _locationArea == 'Detecting...') {
+        setState(() {
+          _locationArea = 'Current Location';
+          _locationAddress = 'GPS active';
+        });
+      }
+    }
+  }
+
+  /// Nominatim search API for location picker bottom sheet
+  Future<List<Map<String, dynamic>>> _searchPlaces(String query) async {
+    try {
+      final url = Uri.parse(
+          'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&addressdetails=1&limit=5&countrycodes=in');
+      final res = await http.get(url, headers: {'User-Agent': 'BookRabbitApp/1.0'}).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final list = json.decode(res.body) as List<dynamic>;
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  /// Manual one-shot GPS trigger when user taps "Use Current Location" in picker
+  Future<void> _detectOnce({VoidCallback? closeSheet}) async {
+    setState(() => _isDetectingLocation = true);
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _userLat = pos.latitude;
+          _userLng = pos.longitude;
+        });
+      }
+      await _reverseGeocode(pos);
       // Restart live stream
       await _positionStream?.cancel();
       _startLocationStream();
@@ -266,10 +237,10 @@ class _DiscoverTabState extends State<DiscoverTab> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showMaterialBanner(
       MaterialBanner(
-        backgroundColor: const Color(0xFF2C2C2E),
-        content: const Text(
+        backgroundColor: context.subCardBg,
+        content: Text(
           'Location permission denied. Tap to open settings.',
-          style: TextStyle(color: Colors.white70, fontSize: 13),
+          style: TextStyle(color: context.textColor, fontSize: 13),
         ),
         actions: [
           TextButton(
@@ -283,8 +254,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
           TextButton(
             onPressed: () =>
                 ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-            child: const Text('Dismiss',
-                style: TextStyle(color: Color(0xFF98989E))),
+            child: Text('Dismiss',
+                style: TextStyle(color: context.subTextColor)),
           ),
         ],
       ),
@@ -308,8 +279,6 @@ class _DiscoverTabState extends State<DiscoverTab> {
     }
   }
 
-  /// Parse lat/lng from a Google Maps URL like:
-  ///   https://maps.google.com/?q=17.4614709334164,78.36532997854147
   static (double lat, double lng)? _parseMapsUrl(String? url) {
     if (url == null || url.isEmpty) return null;
     final uri = Uri.tryParse(url);
@@ -324,10 +293,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
     return (lat, lng);
   }
 
-  /// Haversine formula — returns distance in kilometres.
   static double _haversineKm(
       double lat1, double lng1, double lat2, double lng2) {
-    const r = 6371.0; // Earth radius in km
+    const r = 6371.0;
     final dLat = (lat2 - lat1) * pi / 180;
     final dLng = (lng2 - lng1) * pi / 180;
     final a = sin(dLat / 2) * sin(dLat / 2) +
@@ -338,8 +306,6 @@ class _DiscoverTabState extends State<DiscoverTab> {
     return r * 2 * asin(sqrt(a));
   }
 
-  /// Sort grounds list by distance from current user position.
-  /// Grounds without a parseable maps_url are pushed to the end.
   List<Map<String, dynamic>> _sortByDistance(
       List<Map<String, dynamic>> grounds) {
     if (_userLat == null || _userLng == null) return grounds;
@@ -348,35 +314,14 @@ class _DiscoverTabState extends State<DiscoverTab> {
       final dist = coords != null
           ? _haversineKm(_userLat!, _userLng!, coords.$1, coords.$2)
           : double.maxFinite;
-      return (g, dist);
-    }).toList()
-      ..sort((a, b) => a.$2.compareTo(b.$2));
-    return withDist.map((t) => t.$1).toList();
+      return MapEntry(dist, g);
+    }).toList();
+
+    withDist.sort((a, b) => a.key.compareTo(b.key));
+    return withDist.map((e) => e.value).toList();
   }
 
-  // ─── Nominatim forward-geocode search ───────────────────────────────────────
-
-  Timer? _searchDebounce;
-
-  Future<List<Map<String, dynamic>>> _searchPlaces(String query) async {
-    if (query.trim().length < 2) return [];
-    try {
-      final uri = Uri.parse(
-        'https://nominatim.openstreetmap.org/search'
-        '?q=${Uri.encodeComponent(query)}&format=jsonv2&addressdetails=1&limit=6&accept-language=en',
-      );
-      final response = await http
-          .get(uri, headers: {'User-Agent': 'BookRabbit/1.0'})
-          .timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.cast<Map<String, dynamic>>();
-      }
-    } catch (_) {}
-    return [];
-  }
-
-  // ─── Bottom Sheet ─────────────────────────────────────────────────────────────
+  // ─── Location Picker Bottom Sheet ─────────────────────────────────────────────
 
   void _showLocationPickerBottomSheet() {
     final searchController = TextEditingController();
@@ -386,15 +331,13 @@ class _DiscoverTabState extends State<DiscoverTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: context.cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (modalContext) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            // Mirror outer _isDetectingLocation into modal so the spinner
-            // stays visible while GPS is fetching.
             final detecting = _isDetectingLocation;
 
             void closeSheet() {
@@ -424,17 +367,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
             void pickSuggestion(Map<String, dynamic> place) {
               final addr = place['address'] as Map<String, dynamic>? ?? {};
-              final area =
-                  (addr['suburb'] as String?)?.isNotEmpty == true
-                      ? addr['suburb'] as String
-                      : (addr['city_district'] as String?)?.isNotEmpty == true
-                          ? addr['city_district'] as String
-                          : (addr['city'] as String?)?.isNotEmpty == true
-                              ? addr['city'] as String
-                              : (addr['town'] as String?)?.isNotEmpty == true
-                                  ? addr['town'] as String
-                                  : (addr['county'] as String?) ??
-                                      (place['display_name'] as String? ?? 'Location');
+              final area = (addr['suburb'] as String?)?.isNotEmpty == true
+                  ? addr['suburb'] as String
+                  : (addr['city_district'] as String?)?.isNotEmpty == true
+                      ? addr['city_district'] as String
+                      : (addr['city'] as String?)?.isNotEmpty == true
+                          ? addr['city'] as String
+                          : (addr['town'] as String?)?.isNotEmpty == true
+                              ? addr['town'] as String
+                              : (addr['county'] as String?) ??
+                                  (place['display_name'] as String? ?? 'Location');
 
               final city = (addr['city'] as String?) ??
                   (addr['town'] as String?) ??
@@ -445,57 +387,52 @@ class _DiscoverTabState extends State<DiscoverTab> {
               final fullAddress =
                   [city, state, country].where((s) => s.isNotEmpty).join(', ');
 
-              // Extract lat/lon from the Nominatim result so distances
-              // are recalculated and the list re-sorts immediately.
               final newLat = double.tryParse(place['lat']?.toString() ?? '');
               final newLng = double.tryParse(place['lon']?.toString() ?? '');
 
-              _positionStream?.cancel();
               setState(() {
+                _locationArea = area;
+                _locationAddress = fullAddress.isNotEmpty ? fullAddress : 'Selected manually';
                 if (newLat != null && newLng != null) {
                   _userLat = newLat;
                   _userLng = newLng;
+                  allGrounds = _sortByDistance(allGrounds);
                 }
-                _locationArea = area;
-                _locationAddress =
-                    fullAddress.isNotEmpty ? fullAddress : area;
               });
-              Navigator.pop(modalContext);
+              closeSheet();
             }
 
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+                left: 20,
+                right: 20,
+                top: 12,
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Handle bar
+                  // Grabber handle
                   Center(
                     child: Container(
-                      width: 40,
+                      width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF3A3A3C),
+                        color: context.borderColor,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Set Your Location',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold),
-                  ),
+                  Text('Select Location',
+                      style: TextStyle(
+                          color: context.textColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
 
-                  // ── GPS button ──────────────────────────────────────────────
+                  // ── Current location button ───────────────────────────
                   InkWell(
                     onTap: detecting
                         ? null
@@ -507,7 +444,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                       decoration: BoxDecoration(
                         color: detecting
                             ? const Color(0xFFE54F3F).withValues(alpha: 0.08)
-                            : const Color(0xFFE54F3F).withValues(alpha: 0.12),
+                            : context.subCardBg,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                             color: const Color(0xFFE54F3F)
@@ -536,16 +473,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
                                       : 'Use Current Location',
                                   style: TextStyle(
                                       color: detecting
-                                          ? const Color(0xFF98989E)
-                                          : Colors.white,
+                                          ? context.subTextColor
+                                          : context.textColor,
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold)),
                                 if (detecting) ...[
                                   const SizedBox(height: 2),
-                                  const Text(
+                                  Text(
                                     'Please wait, fetching GPS…',
                                     style: TextStyle(
-                                        color: Color(0xFF98989E), fontSize: 12),
+                                        color: context.subTextColor, fontSize: 12),
                                   ),
                                 ],
                               ],
@@ -557,9 +494,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
                   ),
 
                   const SizedBox(height: 20),
-                  const Text('OR SEARCH FOR A LOCATION',
+                  Text('OR SEARCH FOR A LOCATION',
                       style: TextStyle(
-                          color: Color(0xFF98989E),
+                          color: context.subTextColor,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.0)),
@@ -569,19 +506,19 @@ class _DiscoverTabState extends State<DiscoverTab> {
                   TextField(
                     controller: searchController,
                     autofocus: false,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.textColor),
                     onChanged: onSearchChanged,
                     decoration: InputDecoration(
                       hintText: 'Type a city, area or landmark…',
                       hintStyle:
-                          const TextStyle(color: Color(0xFF98989E), fontSize: 14),
+                          TextStyle(color: context.subTextColor, fontSize: 14),
                       filled: true,
-                      fillColor: const Color(0xFF2C2C2E),
+                      fillColor: context.subCardBg,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none),
                       prefixIcon:
-                          const Icon(Icons.search, color: Color(0xFF98989E)),
+                          Icon(Icons.search, color: context.subTextColor),
                       suffixIcon: isSearching
                           ? const Padding(
                               padding: EdgeInsets.all(12),
@@ -595,8 +532,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                             )
                           : searchController.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear,
-                                      color: Color(0xFF98989E), size: 18),
+                                  icon: Icon(Icons.clear,
+                                      color: context.subTextColor, size: 18),
                                   onPressed: () {
                                     searchController.clear();
                                     setModalState(() {
@@ -617,21 +554,19 @@ class _DiscoverTabState extends State<DiscoverTab> {
                       child: Container(
                         constraints: const BoxConstraints(maxHeight: 240),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2C2C2E),
+                          color: context.subCardBg,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListView.separated(
                           shrinkWrap: true,
                           padding: EdgeInsets.zero,
                           itemCount: suggestions.length,
-                          separatorBuilder: (_, __) => const Divider(
-                              height: 1, color: Color(0xFF3A3A3C)),
+                          separatorBuilder: (_, __) => Divider(
+                              height: 1, color: context.borderColor),
                           itemBuilder: (_, i) {
                             final place = suggestions[i];
                             final displayName =
                                 place['display_name'] as String? ?? '';
-                            // Split display name: first part is the main name,
-                            // rest is the address breadcrumb
                             final parts = displayName.split(', ');
                             final title = parts.first;
                             final subtitle = parts.length > 1
@@ -659,8 +594,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                                         children: [
                                           Text(
                                             title,
-                                            style: const TextStyle(
-                                                color: Colors.white,
+                                            style: TextStyle(
+                                                color: context.textColor,
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600),
                                             maxLines: 1,
@@ -670,8 +605,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                                             const SizedBox(height: 2),
                                             Text(
                                               subtitle,
-                                              style: const TextStyle(
-                                                  color: Color(0xFF98989E),
+                                              style: TextStyle(
+                                                  color: context.subTextColor,
                                                   fontSize: 12),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -697,16 +632,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                          color: const Color(0xFF2C2C2E),
+                          color: context.subCardBg,
                           borderRadius: BorderRadius.circular(12)),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Icon(Icons.search_off,
-                              color: Color(0xFF98989E), size: 18),
-                          SizedBox(width: 10),
+                              color: context.subTextColor, size: 18),
+                          const SizedBox(width: 10),
                           Text('No locations found',
                               style: TextStyle(
-                                  color: Color(0xFF98989E), fontSize: 13)),
+                                  color: context.subTextColor, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -729,8 +664,6 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Re-sort whenever user position updates (allGrounds may still be unsorted
-    // if location arrived after the initial fetch).
     final sortedGrounds = _sortByDistance(allGrounds);
 
     final filteredGrounds = sortedGrounds.where((ground) {
@@ -749,21 +682,14 @@ class _DiscoverTabState extends State<DiscoverTab> {
         Expanded(
           child: LayoutBuilder(
                       builder: (context, constraints) {
-                        // Responsive column count based on available width:
-                        //  < 540  → 2  (phone portrait)
-                        //  540-719 → 3  (phone landscape)
-                        //  720-1099 → 4  (tablet / wide phone landscape)
-                        //  ≥ 1100  → 5  (large tablet / desktop)
                         final w = constraints.maxWidth;
                         final cols = w >= 1100 ? 5
                             : w >= 720 ? 4
                             : w >= 540 ? 3
                             : 2;
 
-                        // Tighten spacing slightly for smaller cards
                         final spacing = w >= 720 ? 14.0 : 12.0;
 
-                        // Aspect ratio: taller cards on portrait, more square on wide
                         final aspectRatio = w >= 1100 ? 0.88
                             : w >= 720 ? 0.82
                             : w >= 540 ? 0.78
@@ -786,8 +712,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                             itemCount: cols * 2,
                             itemBuilder: (context, index) {
                               return Shimmer.fromColors(
-                                baseColor: const Color(0xFF2C2C2E),
-                                highlightColor: const Color(0xFF3A3A3C),
+                                baseColor: context.subCardBg,
+                                highlightColor: context.isDark ? const Color(0xFF3A3A3C) : const Color(0xFFE5E5EA),
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
@@ -795,7 +721,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                                     Expanded(
                                         child: Container(
                                             decoration: BoxDecoration(
-                                                color: Colors.white,
+                                                color: context.subCardBg,
                                                 borderRadius:
                                                     BorderRadius.circular(
                                                         12)))),
@@ -803,17 +729,17 @@ class _DiscoverTabState extends State<DiscoverTab> {
                                     Container(
                                         height: 14,
                                         width: double.infinity,
-                                        color: Colors.white),
+                                        color: context.subCardBg),
                                     const SizedBox(height: 4),
                                     Container(
                                         height: 12,
                                         width: 80,
-                                        color: Colors.white),
+                                        color: context.subCardBg),
                                     const SizedBox(height: 4),
                                     Container(
                                         height: 12,
                                         width: 120,
-                                        color: Colors.white),
+                                        color: context.subCardBg),
                                   ],
                                 ),
                               );
@@ -825,9 +751,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text('Failed to load grounds',
+                                Text('Failed to load grounds',
                                     style: TextStyle(
-                                        color: Colors.white70,
+                                        color: context.subTextColor,
                                         fontSize: 16)),
                                 const SizedBox(height: 12),
                                 ElevatedButton(
@@ -844,10 +770,10 @@ class _DiscoverTabState extends State<DiscoverTab> {
                           );
                         }
                         if (filteredGrounds.isEmpty) {
-                          return const Center(
+                          return Center(
                               child: Text('No grounds found.',
                                   style: TextStyle(
-                                      color: Colors.white70,
+                                      color: context.subTextColor,
                                       fontSize: 16)));
                         }
                         return GridView.builder(
@@ -929,7 +855,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                           color: _isDetectingLocation
                               ? const Color(0xFFE54F3F)
                                   .withValues(alpha: 0.15)
-                              : const Color(0xFFEBEBF5),
+                              : context.subCardBg,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -938,7 +864,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                               : Icons.location_on,
                           color: _isDetectingLocation
                               ? const Color(0xFFE54F3F)
-                              : Colors.black87,
+                              : context.textColor,
                           size: 20,
                         ),
                       ),
@@ -959,7 +885,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                                   _locationArea,
                                   key: ValueKey(_locationArea),
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: context.textColor,
                                     fontSize: isWide ? 15 : 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -969,8 +895,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.keyboard_arrow_down,
-                                color: Colors.white, size: 18),
+                            Icon(Icons.keyboard_arrow_down,
+                                color: context.textColor, size: 18),
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -980,7 +906,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                             _locationAddress,
                             key: ValueKey(_locationAddress),
                             style: TextStyle(
-                                color: Colors.white70, fontSize: isWide ? 11 : 13),
+                                color: context.subTextColor, fontSize: isWide ? 11 : 13),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -999,7 +925,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF2C2C2E),
+                color: context.subCardBg,
                 shape: BoxShape.circle,
                 image: DecorationImage(
                   image: NetworkImage(
@@ -1024,20 +950,20 @@ class _DiscoverTabState extends State<DiscoverTab> {
       child: Container(
         height: isWide ? 40 : 48,
         decoration: BoxDecoration(
-          color: const Color(0xFF323232),
+          color: context.subCardBg,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
             const SizedBox(width: 16),
-            const Icon(Icons.search, color: Color(0xFF8E8E93), size: 20),
+            Icon(Icons.search, color: context.subTextColor, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
-                style: TextStyle(color: Colors.white, fontSize: isWide ? 14 : 16),
+                style: TextStyle(color: context.textColor, fontSize: isWide ? 14 : 16),
                 decoration: InputDecoration(
                   hintText: 'Search by ground name or sport',
-                  hintStyle: TextStyle(color: const Color(0xFF8E8E93), fontSize: isWide ? 14 : 16),
+                  hintStyle: TextStyle(color: context.subTextColor, fontSize: isWide ? 14 : 16),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -1085,7 +1011,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
               final isSelected = category == _selectedCategory;
               final color = isSelected
                   ? const Color(0xFFE54F3F)
-                  : const Color(0xFF8E8E93);
+                  : context.subTextColor;
 
               return GestureDetector(
                 onTap: () => setState(() => _selectedCategory = category),
@@ -1167,8 +1093,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
           const SizedBox(height: 8),
           Text(
             ground['title'],
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.textColor,
               fontSize: 15,
               fontWeight: FontWeight.bold,
               letterSpacing: -0.5,
@@ -1194,8 +1120,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
               Expanded(
                 child: Text(
                   '• ${ground['type']}',
-                  style: const TextStyle(
-                      color: Color(0xFF98989E), fontSize: 12),
+                  style: TextStyle(
+                      color: context.subTextColor, fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1205,8 +1131,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
           const SizedBox(height: 2),
           Row(
             children: [
-              const Icon(Icons.location_on,
-                  color: Color(0xFF98989E), size: 12),
+              Icon(Icons.location_on,
+                  color: context.subTextColor, size: 12),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(

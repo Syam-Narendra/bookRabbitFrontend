@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'review_booking_screen.dart';
 import '../services/ground_service.dart';
-
+import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
+import 'review_booking_screen.dart';
+import 'login_screen.dart';
 
 class GroundDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
@@ -25,24 +26,37 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   String? _selectedStartTime;
   DateTime? _selectedDate;
   int _durationMins = 60;
-  int _basePrice = 0;
+  int _basePrice = 600;
 
   Set<String> _bookedSegs = {};
   Set<String> _heldSegs = {};
   bool _isLoadingAvailability = false;
   Timer? _heldPollTimer;
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _slotAreaKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = DateTime.now();
     _generateTimeSlots();
     _parsePrice();
+    _fetchAvailability();
+    _startHeldPolling();
   }
 
   @override
   void dispose() {
     _heldPollTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _parsePrice() {
+    final priceStr = widget.ground['price']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '600';
+    if (priceStr.isNotEmpty) {
+      _basePrice = int.tryParse(priceStr) ?? 600;
+    }
   }
 
   Future<void> _fetchAvailability() async {
@@ -51,7 +65,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     setState(() => _isLoadingAvailability = true);
     try {
       final availability = await GroundService.fetchSlotAvailability(
-        groundId: widget.ground['id'] as String,
+        groundId: widget.ground['id']?.toString() ?? '',
         date: dateStr,
       );
       if (!mounted) return;
@@ -72,23 +86,13 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
       try {
         final availability = await GroundService.fetchSlotAvailability(
-          groundId: widget.ground['id'] as String,
+          groundId: widget.ground['id']?.toString() ?? '',
           date: dateStr,
         );
         if (!mounted) return;
         setState(() => _heldSegs = availability['heldSegs'] ?? {});
-      } catch (_) {
-        // Ignore — keep showing the last known held slots.
-      }
+      } catch (_) {}
     });
-  }
-
-  void _parsePrice() {
-    // Expected format: "₹600/hr"
-    final priceStr = widget.ground['price'].toString().replaceAll(RegExp(r'[^0-9]'), '');
-    if (priceStr.isNotEmpty) {
-      _basePrice = int.parse(priceStr);
-    }
   }
 
   void _generateTimeSlots() {
@@ -109,26 +113,20 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         startHour = int.parse(openParts[0]);
         startMin = int.parse(openParts[1]);
       }
-      
       final closeParts = closeTimeStr.split(':');
       if (closeParts.length >= 2) {
         endHour = int.parse(closeParts[0]);
         endMin = int.parse(closeParts[1]);
       }
-    } catch (e) {
-      // Fallback to default times on parse error
-    }
+    } catch (_) {}
     
     int startTotalMins = startHour * 60 + startMin;
     int endTotalMins = endHour * 60 + endMin;
     
-    // Handle overnight slots (e.g. open 22:00, close 06:00)
     if (endTotalMins <= startTotalMins) {
       endTotalMins += 24 * 60;
     }
     
-    // Generate slots in 30 min intervals
-    // We only generate a start time if there is at least 30 mins before closing
     for (int currentMins = startTotalMins; currentMins <= endTotalMins - 30; currentMins += 30) {
       int h = (currentMins ~/ 60) % 24;
       int m = currentMins % 60;
@@ -143,14 +141,18 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   }
 
   int _timeToMins(String timeStr) {
-    final parts = timeStr.split(' ');
-    final timeParts = parts[0].split(':');
-    int hours = int.parse(timeParts[0]);
-    int mins = int.parse(timeParts[1]);
-    bool isPM = parts[1] == 'PM';
-    if (isPM && hours != 12) hours += 12;
-    if (!isPM && hours == 12) hours = 0;
-    return hours * 60 + mins;
+    try {
+      final parts = timeStr.split(' ');
+      final timeParts = parts[0].split(':');
+      int hours = int.parse(timeParts[0]);
+      int mins = int.parse(timeParts[1]);
+      bool isPM = parts[1] == 'PM';
+      if (isPM && hours != 12) hours += 12;
+      if (!isPM && hours == 12) hours = 0;
+      return hours * 60 + mins;
+    } catch (_) {
+      return 600;
+    }
   }
 
   String _calculateEndTime(String startTime, int durationMins) {
@@ -163,98 +165,247 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     return '$displayEndHours:$displayEndMins $endAmPm';
   }
 
-  String _formatApiTime(String? timeStr) {
-    if (timeStr == null || timeStr.isEmpty) return '';
-    try {
-      final parts = timeStr.split(':');
-      if (parts.length >= 2) {
-        int h = int.parse(parts[0]);
-        int m = int.parse(parts[1]);
-        String ampm = h >= 12 ? 'PM' : 'AM';
-        int displayHour = h > 12 ? h - 12 : (h == 0 ? 12 : h);
-        String minStr = m.toString().padLeft(2, '0');
-        return '$displayHour:$minStr $ampm';
+  int _calculateMaxAvailableDuration(String startSlot) {
+    final index = _timeSlots.indexOf(startSlot);
+    if (index == -1) return 60;
+
+    int consecutiveMins = 30;
+    for (int i = index + 1; i < _timeSlots24.length; i++) {
+      final slot24 = _timeSlots24[i];
+      if (_bookedSegs.contains(slot24) || _heldSegs.contains(slot24) || _isSlotPast(slot24)) {
+        break;
       }
-    } catch (e) {
-      // Fallback
+      consecutiveMins += 30;
     }
-    return timeStr;
+    return consecutiveMins;
   }
 
-  String _getOpenCloseText() {
-    String openStr = widget.ground['open_time']?.toString() ?? '10:00';
-    String closeStr = widget.ground['close_time']?.toString() ?? '20:00';
-    return 'Open ${_formatApiTime(openStr)} - ${_formatApiTime(closeStr)}';
+  bool _isSlotPast(String slot24) {
+    final selectedDate = _selectedDate;
+    if (selectedDate == null) return false;
+    final now = DateTime.now();
+    final isToday = selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+    if (!isToday) return false;
+
+    try {
+      final parts = slot24.split(':');
+      final slotMins = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+      final nowMins = now.hour * 60 + now.minute;
+      return slotMins + 30 <= nowMins;
+    } catch (_) {
+      return false;
+    }
   }
 
   String _formatDuration(int mins) {
-    if (mins % 60 == 0) {
-      int hrs = mins ~/ 60;
-      return '$hrs hr${hrs > 1 ? 's' : ''}';
-    } else {
-      double hrs = mins / 60;
-      return '${hrs.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')} hrs';
-    }
+    if (mins < 60) return '$mins Mins';
+    final hrs = mins ~/ 60;
+    final remMins = mins % 60;
+    if (remMins == 0) return '$hrs ${hrs == 1 ? 'Hour' : 'Hours'}';
+    return '$hrs hr $remMins mins';
   }
 
-
-
-  Widget _buildImageWidget({double height = 280.0}) {
-    return Hero(
-      tag: 'ground_image_${widget.ground['id'] ?? widget.ground['title']}',
-      child: Builder(
-        builder: (context) {
-          final images = widget.ground['images'] as List<dynamic>? ?? [];
-          if (images.isEmpty) {
-            final fallbackUrl = widget.ground['imageUrl'] ?? 'assets/images/sports_bunnies.png';
-            if (fallbackUrl.toString().startsWith('http')) {
-              return Image.network(
-                fallbackUrl,
-                height: height,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              );
-            } else {
-              return Image.asset(
-                fallbackUrl,
-                height: height,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              );
-            }
-          }
-          return CarouselSlider(
-            options: CarouselOptions(
-              height: height,
-              viewportFraction: 1.0,
-              autoPlay: images.length > 1,
-              autoPlayInterval: const Duration(seconds: 4),
-            ),
-            items: images.map((url) {
-              return Image.network(
-                url as String,
-                fit: BoxFit.cover,
-                width: double.infinity,
-              );
-            }).toList(),
-          );
-        },
-      ),
-    );
+  int _calculatePrice() {
+    return ((_basePrice / 60) * _durationMins).round();
   }
 
   void _handleBack() {
     if (widget.onBackPressed != null) {
       widget.onBackPressed!();
+    } else if (Navigator.canPop(context)) {
+      Navigator.pop(context);
     } else {
       Navigator.maybePop(context);
     }
   }
 
+  void _proceedToReview() {
+    if (_selectedStartTime == null || _selectedDate == null) return;
+    if (AuthService.currentUser == null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+      return;
+    }
+
+    final fare = ((_basePrice / 60) * _durationMins).round();
+    int platformFee = (fare * 0.03).round();
+    if (platformFee < 10 && fare > 0) platformFee = 10;
+    final finalPrice = fare + platformFee;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReviewBookingScreen(
+          ground: widget.ground,
+          date: _selectedDate!,
+          startTime: _selectedStartTime!,
+          endTime: _calculateEndTime(_selectedStartTime!, _durationMins),
+          durationStr: _formatDuration(_durationMins),
+          fare: fare,
+          platformFee: platformFee,
+          finalPrice: finalPrice,
+        ),
+      ),
+    );
+  }
+
+  void _showDurationBottomSheet(String slot) {
+    int maxAllowedMins = _calculateMaxAvailableDuration(slot);
+    if (maxAllowedMins > 11 * 60) {
+      maxAllowedMins = 11 * 60;
+    }
+    
+    int localDuration = 60;
+    if (localDuration > maxAllowedMins) {
+      localDuration = maxAllowedMins;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.cardBg,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'How long do you want to play?',
+                        style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close, color: context.subTextColor),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Selected start time: $slot on ${DateFormat('EEE, d MMM').format(_selectedDate!)}',
+                    style: TextStyle(color: context.subTextColor, fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: localDuration <= 30
+                            ? null
+                            : () {
+                                setModalState(() {
+                                  localDuration -= 30;
+                                });
+                              },
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: localDuration <= 30 ? context.borderColor : const Color(0xFFE54F3F)),
+                          ),
+                          child: Icon(Icons.remove, color: localDuration <= 30 ? Colors.grey : const Color(0xFFE54F3F), size: 28),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF5200).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE54F3F), width: 2),
+                        ),
+                        child: Text(
+                          _formatDuration(localDuration),
+                          style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      IconButton(
+                        onPressed: (localDuration + 30) > maxAllowedMins
+                            ? null
+                            : () {
+                                setModalState(() {
+                                  localDuration += 30;
+                                });
+                              },
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: (localDuration + 30) > maxAllowedMins ? context.borderColor : const Color(0xFFE54F3F)),
+                          ),
+                          child: Icon(Icons.add, color: (localDuration + 30) > maxAllowedMins ? Colors.grey : const Color(0xFFE54F3F), size: 28),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Calculated Price', style: TextStyle(color: context.subTextColor, fontSize: 13)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '₹${((_basePrice / 60) * localDuration).round()}',
+                            style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 24, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedStartTime = slot;
+                            _durationMins = localDuration;
+                          });
+                          Navigator.pop(context);
+                          _proceedToReview();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE54F3F),
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text(
+                          'Confirm & Proceed',
+                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF161616),
+      backgroundColor: context.bgColor,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -264,7 +415,6 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Left 50%: Images & Address/Details
                   Expanded(
                     flex: 1,
                     child: Column(
@@ -275,14 +425,14 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                           child: Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                                icon: Icon(Icons.arrow_back_ios_new, color: context.textColor, size: 20),
                                 onPressed: _handleBack,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   widget.ground['title'] ?? 'Ground Details',
-                                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: context.textColor, fontSize: 20, fontWeight: FontWeight.bold),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -292,14 +442,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                         ),
                         Expanded(
                           child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                            padding: const EdgeInsets.all(24),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: _buildImageWidget(height: 320),
-                                ),
+                                ClipRRect(borderRadius: BorderRadius.circular(16), child: _buildImageWidget(height: 320)),
                                 const SizedBox(height: 24),
                                 _buildTitleAndDetails(),
                                 const SizedBox(height: 32),
@@ -311,28 +458,26 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       ],
                     ),
                   ),
-                  const VerticalDivider(width: 1, color: Color(0xFF2C2C2E)),
-                  // Right 50%: Only Time Slots & Booking (Vertically Centered)
+                  VerticalDivider(width: 1, color: context.borderColor),
                   Expanded(
                     flex: 1,
                     child: LayoutBuilder(
                       builder: (context, rightConstraints) {
+                        final minH = rightConstraints.maxHeight.isFinite
+                            ? (rightConstraints.maxHeight - 48).clamp(0.0, double.infinity)
+                            : 0.0;
                         return SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 32),
-                          child: Center(
-                            child: Container(
-                              constraints: BoxConstraints(
-                                minHeight: (rightConstraints.maxHeight - 64).clamp(0.0, double.infinity),
-                                maxWidth: 640,
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildTimeSlotsSection(),
-                                  const SizedBox(height: 40),
-                                ],
-                              ),
+                          child: Container(
+                            constraints: BoxConstraints(minHeight: minH),
+                            padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSlotGridSection(),
+                                const SizedBox(height: 32),
+                                _buildBottomBarContent(),
+                              ],
                             ),
                           ),
                         );
@@ -343,26 +488,36 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               );
             }
 
-            // Mobile view: original CustomScrollView layout
-            return CustomScrollView(
-              slivers: [
-                _buildSliverAppBar(),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildTitleAndDetails(),
-                        const SizedBox(height: 32),
-                        _buildDateSelector(),
-                        const SizedBox(height: 32),
-                        _buildTimeSlotsSection(),
-                        SizedBox(height: isWide ? 40 : 140),
+                        _buildMobileHeroHeader(),
+                        Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTitleAndDetails(),
+                              const SizedBox(height: 32),
+                              _buildDateSelector(),
+                              const SizedBox(height: 32),
+                              Container(
+                                key: _slotAreaKey,
+                                child: _buildSlotGridSection(),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
+                _buildStickyBottomBar(),
               ],
             );
           },
@@ -371,48 +526,74 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     );
   }
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 280.0,
-      pinned: true,
-      backgroundColor: const Color(0xFF161616),
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: CircleAvatar(
-          backgroundColor: Colors.black54,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-            onPressed: _handleBack,
+  Widget _buildMobileHeroHeader() {
+    return Stack(
+      children: [
+        _buildImageWidget(height: 280),
+        Positioned(
+          top: 16,
+          left: 16,
+          child: CircleAvatar(
+            backgroundColor: Colors.black45,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+              onPressed: _handleBack,
+            ),
           ),
         ),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            _buildImageWidget(height: 280.0),
-            // Gradient overlay for readability
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      const Color(0xFF161616),
-                      const Color(0xFF161616).withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+      ],
+    );
+  }
+
+  Widget _buildImageWidget({required double height}) {
+    final images = widget.ground['images'] as List<dynamic>? ?? [];
+    if (images.isNotEmpty) {
+      return CarouselSlider(
+        options: CarouselOptions(
+          height: height,
+          viewportFraction: 1.0,
+          autoPlay: images.length > 1,
+          autoPlayInterval: const Duration(seconds: 4),
         ),
-      ),
+        items: images.map((url) {
+          return Image.network(
+            url as String,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            errorBuilder: (_, __, ___) => Image.asset('assets/images/sports_bunnies.png', height: height, width: double.infinity, fit: BoxFit.cover),
+          );
+        }).toList(),
+      );
+    }
+
+    final imageUrl = widget.ground['imageUrl'] as String? ?? '';
+    final fallback = 'assets/images/sports_bunnies.png';
+
+    if (imageUrl.startsWith('assets/')) {
+      return Image.asset(imageUrl, height: height, width: double.infinity, fit: BoxFit.cover,
+        errorBuilder: (_, e, s) => Image.asset(fallback, height: height, width: double.infinity, fit: BoxFit.cover),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          height: height,
+          width: double.infinity,
+          color: context.subCardBg,
+          child: const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE54F3F)),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return Image.asset(fallback, height: height, width: double.infinity, fit: BoxFit.cover);
+      },
     );
   }
 
@@ -426,315 +607,44 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           children: [
             Expanded(
               child: Text(
-                widget.ground['title'],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
+                widget.ground['title'] ?? 'Sports Ground',
+                style: TextStyle(color: context.textColor, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
               ),
             ),
+            const SizedBox(width: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFE54F3F).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                widget.ground['price'],
-                style: const TextStyle(
-                  color: Color(0xFFE54F3F),
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                children: [
+                  const Icon(Icons.sports_soccer, color: Color(0xFFE54F3F), size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.ground['type'] ?? 'Sports',
+                    style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.location_on, color: Color(0xFF98989E), size: 16),
+            Icon(Icons.location_on, color: context.subTextColor, size: 16),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                '${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']}',
-                style: const TextStyle(color: Color(0xFF98989E), fontSize: 14),
+                widget.ground['location'] ?? 'Hyderabad, Telangana',
+                style: TextStyle(color: context.subTextColor, fontSize: 14),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2C2C2E),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                widget.ground['category'],
-                style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _getOpenCloseText(),
-              style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ],
         ),
       ],
-    );
-  }
-
-  void _showDurationBottomSheet(String slot) {
-    int startMins = _timeToMins(slot);
-    String closeTimeStr = widget.ground['close_time']?.toString() ?? '20:00';
-    int closeMins = 20 * 60;
-    try {
-      final parts = closeTimeStr.split(':');
-      if (parts.length >= 2) {
-        closeMins = int.parse(parts[0]) * 60 + int.parse(parts[1]);
-      }
-    } catch (_) {}
-    
-    if (closeMins <= startMins) {
-      closeMins += 24 * 60;
-    }
-    
-    int maxAllowedMins = closeMins - startMins;
-    if (maxAllowedMins > 11 * 60) {
-      maxAllowedMins = 11 * 60; // Cap at 11 hours
-    }
-    
-    int localDuration = 60; // Default
-    if (localDuration > maxAllowedMins) {
-      localDuration = maxAllowedMins;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: 24.0,
-                    right: 24.0,
-                    top: 24.0,
-                    bottom: MediaQuery.of(context).viewInsets.bottom + 24.0,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          
-                          const SizedBox(width: 8),
-                          const Text(
-                            'How long do you want to play?',
-                            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white54),
-                        onPressed: () => Navigator.pop(context),
-                      )
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 32, top: 4, bottom: 24),
-                    child: Text(
-                      '${_formatDuration(localDuration)} — ends at ${_calculateEndTime(slot, localDuration)}',
-                      style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Container(
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: localDuration <= 30
-                                ? null
-                                : () {
-                                    setModalState(() {
-                                      localDuration -= 30;
-                                    });
-                                  },
-                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(32)),
-                            child: const Center(
-                              child: Icon(Icons.remove, color: Colors.black, size: 28),
-                            ),
-                          ),
-                        ),
-                        Container(width: 1, height: 40, color: Colors.grey[300]),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _formatDuration(localDuration),
-                                style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                'until ${_calculateEndTime(slot, localDuration)}',
-                                style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(width: 1, height: 40, color: Colors.grey[300]),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFCECEB),
-                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(32)),
-                              border: Border.all(color: const Color(0xFFE54F3F), width: 2),
-                            ),
-                            child: InkWell(
-                              onTap: (localDuration + 30) > maxAllowedMins
-                                  ? null
-                                  : () {
-                                      setModalState(() {
-                                        localDuration += 30;
-                                      });
-                                    },
-                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(32)),
-                              child: Center(
-                                child: Icon(Icons.add, color: (localDuration + 30) > maxAllowedMins ? Colors.grey : const Color(0xFFE54F3F), size: 28),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(
-                      'Tap + / - to adjust in 30-min steps · max ${_formatDuration(maxAllowedMins)}',
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Summary Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2C2C2E),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('TOTAL TO PAY', style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.5)),
-                        const SizedBox(height: 4),
-                        Builder(
-                          builder: (context) {
-                            int fare = (_basePrice / 2 * (localDuration ~/ 30)).round();
-                            int platformFee = (fare * 0.03).round();
-                            if (platformFee < 10 && fare > 0) platformFee = 10;
-                            int finalPrice = fare + platformFee;
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('₹$finalPrice', style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 32, fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 8),
-                                Text('₹$fare fare + ₹$platformFee platform fee', style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                                const SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    _buildCardPill('FROM', slot),
-                                    _buildCardPill('TO', _calculateEndTime(slot, localDuration)),
-                                    _buildCardPill('DURATION', _formatDuration(localDuration)),
-                                    _buildCardPill('RATE', '₹$_basePrice/hr'),
-                                  ],
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedStartTime = slot;
-                          _durationMins = localDuration;
-                        });
-                        Navigator.pop(context); // Close BottomSheet
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ReviewBookingScreen(
-                              ground: widget.ground,
-                              date: _selectedDate!,
-                              startTime: slot,
-                              endTime: _calculateEndTime(slot, localDuration),
-                              durationStr: _formatDuration(localDuration),
-                              fare: (_basePrice / 2 * (localDuration ~/ 30)).round(),
-                              platformFee: ((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round() < 10 && (_basePrice / 2 * (localDuration ~/ 30)).round() > 0 ? 10 : ((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round(),
-                              finalPrice: (_basePrice / 2 * (localDuration ~/ 30)).round() + (((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round() < 10 && (_basePrice / 2 * (localDuration ~/ 30)).round() > 0 ? 10 : ((_basePrice / 2 * (localDuration ~/ 30)).round() * 0.03).round()),
-                            ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE54F3F),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Confirm Booking', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ),
-            ),
-           ),
-          );
-        });
-      },
     );
   }
 
@@ -743,13 +653,16 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Select Date',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Select Date', style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+            if (_selectedDate != null)
+              Text(
+                DateFormat('MMMM yyyy').format(_selectedDate!),
+                style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+          ],
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -759,57 +672,48 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             itemCount: 15,
             itemBuilder: (context, index) {
               final date = now.add(Duration(days: index));
-              final isSelected = _selectedDate != null && 
-                                 _selectedDate!.year == date.year && 
-                                 _selectedDate!.month == date.month && 
-                                 _selectedDate!.day == date.day;
+              final isSelected = _selectedDate != null &&
+                  _selectedDate!.year == date.year &&
+                  _selectedDate!.month == date.month &&
+                  _selectedDate!.day == date.day;
+
               return GestureDetector(
                 onTap: () {
                   setState(() {
                     _selectedDate = date;
-                    _selectedStartTime = null; // reset time selection when date changes
-                    _bookedSegs = {};
-                    _heldSegs = {};
+                    _selectedStartTime = null;
                   });
                   _fetchAvailability();
                   _startHeldPolling();
                 },
                 child: Container(
-                  width: 65,
+                  width: 64,
                   margin: const EdgeInsets.only(right: 12),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFE54F3F) : const Color(0xFF2C2C2E),
+                    color: isSelected ? const Color(0xFFE54F3F) : context.cardBg,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFFE54F3F) : Colors.transparent,
+                      color: isSelected ? const Color(0xFFE54F3F) : context.borderColor,
                     ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        DateFormat('MMM').format(date).toUpperCase(),
+                        DateFormat('EEE').format(date).toUpperCase(),
                         style: TextStyle(
-                          color: isSelected ? Colors.white : const Color(0xFF98989E),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        date.day.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        DateFormat('E').format(date),
-                        style: TextStyle(
-                          color: isSelected ? Colors.white70 : const Color(0xFF98989E),
+                          color: isSelected ? Colors.white : context.subTextColor,
                           fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        DateFormat('d').format(date),
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : context.textColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -819,58 +723,19 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             },
           ),
         ),
-        const SizedBox(height: 10),
-        const Text(
-          '* Bookings Open for Next 15 days only',
-          style: TextStyle(color: Color(0xFF98989E), fontSize: 12, fontStyle: FontStyle.italic),
-        ),
       ],
     );
   }
 
-  Widget _buildTimeSlotsSection() {
-    if (_selectedDate == null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Column(
-          children: [
-            Icon(Icons.calendar_today, color: Color(0xFF98989E), size: 40),
-            SizedBox(height: 16),
-            Text(
-              'Please select a date\nto view available time slots.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF98989E), fontSize: 14, height: 1.4),
-            ),
-          ],
-        ),
-      );
-    }
-
+  Widget _buildSlotGridSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Select Start Time',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (_selectedStartTime != null)
-              Text(
-                '$_durationMins mins',
-                style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 14, fontWeight: FontWeight.bold),
-              )
-            else if (_isLoadingAvailability)
+            Text('Available Slots', style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+            if (_isLoadingAvailability)
               const SizedBox(
                 width: 16,
                 height: 16,
@@ -878,186 +743,252 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               ),
           ],
         ),
+        const SizedBox(height: 8),
+        Text('Tap a slot to choose your duration', style: TextStyle(color: context.subTextColor, fontSize: 12, fontStyle: FontStyle.italic)),
         const SizedBox(height: 16),
-        GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: _timeSlots.length,
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 130,
-            mainAxisExtent: 44,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemBuilder: (context, index) {
-            if (_isLoadingAvailability) {
-              return Shimmer.fromColors(
-                baseColor: const Color(0xFF2C2C2E),
-                highlightColor: const Color(0xFF3A3A3C),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
+
+        if (_isLoadingAvailability)
+          _buildSlotSkeletonGrid()
+        else if (_timeSlots.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: context.cardBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.calendar_today, color: context.subTextColor, size: 40),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No slots available',
+                    style: TextStyle(color: context.subTextColor, fontSize: 14),
                   ),
-                ),
-              );
-            }
-
-            final slot = _timeSlots[index];
-            final slot24 = _timeSlots24[index];
-            final isSelected = _selectedStartTime == slot;
-            final isPast = _isSlotPast(slot24);
-            final isBooked = _bookedSegs.contains(slot24);
-            final isHeld = !isBooked && _heldSegs.contains(slot24);
-            final isDisabled = isPast || isBooked || isHeld;
-
-            Color bgColor;
-            Color textColor;
-            Color borderColor;
-            String? badge;
-            if (isSelected) {
-              bgColor = const Color(0xFFFF5200);
-              textColor = Colors.white;
-              borderColor = const Color(0xFFFF5200);
-            } else if (isPast) {
-              bgColor = const Color(0xFF18181B);
-              textColor = const Color(0xFF52525B);
-              borderColor = const Color(0xFF27272A);
-              badge = 'Past';
-            } else if (isBooked) {
-              // Muted Dark Wine / Burgundy for Booked slots
-              bgColor = const Color(0xFF2D1E22);
-              textColor = const Color(0xFFE57373);
-              borderColor = const Color(0xFF4A252C);
-              badge = 'Booked';
-            } else if (isHeld) {
-              bgColor = const Color(0xFF221A0F);
-              textColor = const Color(0xFFF59E0B);
-              borderColor = const Color(0xFF453015);
-              badge = '⏳ Held';
-            } else {
-              // Available: Clean dark card with crisp white text
-              bgColor = const Color(0xFF27272A);
-              textColor = Colors.white;
-              borderColor = const Color(0xFF3F3F46);
-            }
-
-            return GestureDetector(
-              onTap: isDisabled
-                  ? null
-                  : () {
-                      _showDurationBottomSheet(slot);
-                    },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: borderColor, width: 1.2),
-                ),
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      slot,
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (badge != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 1),
-                        child: Text(
-                          badge,
-                          style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
-            ).animate().fade(duration: const Duration(milliseconds: 200), delay: Duration(milliseconds: index * 10));
-          },
-        ),
-        const SizedBox(height: 16),
-        _buildSlotLegend(),
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 2.3,
+                ),
+                itemCount: _timeSlots.length,
+                itemBuilder: (context, index) {
+                  final slot = _timeSlots[index];
+                  final slot24 = _timeSlots24[index];
+                  final isSelected = _selectedStartTime == slot;
+                  final isPast = _isSlotPast(slot24);
+                  final isBooked = _bookedSegs.contains(slot24);
+                  final isHeld = !isBooked && _heldSegs.contains(slot24);
+
+                  return _buildSlotChip(slot, slot24, isSelected: isSelected, isPast: isPast, isBooked: isBooked, isHeld: isHeld);
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildSlotLegend(),
+            ],
+          ),
       ],
     );
   }
 
-  bool _isSlotPast(String slot24) {
-    final selectedDate = _selectedDate;
-    if (selectedDate == null) return false;
-    final now = DateTime.now();
-    final isToday = selectedDate.year == now.year &&
-        selectedDate.month == now.month &&
-        selectedDate.day == now.day;
-    if (!isToday) return false;
+  Widget _buildSlotSkeletonGrid() {
+    return Shimmer.fromColors(
+      baseColor: context.subCardBg,
+      highlightColor: context.isDark ? const Color(0xFF3A3A3C) : const Color(0xFFE5E5EA),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 2.3,
+        ),
+        itemCount: 9,
+        itemBuilder: (_, __) => Container(
+          decoration: BoxDecoration(
+            color: context.subCardBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
 
-    final parts = slot24.split(':');
-    final slotMins = int.parse(parts[0]) * 60 + int.parse(parts[1]);
-    final nowMins = now.hour * 60 + now.minute;
-    return slotMins + 30 <= nowMins;
+  Widget _buildSlotChip(String timeStr, String slot24, {required bool isSelected, required bool isPast, required bool isBooked, required bool isHeld}) {
+    Color bgColor;
+    Color textColor;
+    Color borderColor;
+
+    if (isSelected) {
+      bgColor = const Color(0xFFFF5200);
+      textColor = Colors.white;
+      borderColor = const Color(0xFFFF5200);
+    } else if (isPast) {
+      bgColor = context.isDark ? const Color(0xFF18181B) : const Color(0xFFEFEFF4);
+      textColor = context.subTextColor;
+      borderColor = context.borderColor;
+    } else if (isBooked) {
+      bgColor = context.isDark ? const Color(0xFF2D1E22) : const Color(0xFFFFEBEE);
+      textColor = const Color(0xFFE57373);
+      borderColor = const Color(0xFF4A252C);
+    } else if (isHeld) {
+      bgColor = context.isDark ? const Color(0xFF221A0F) : const Color(0xFFFFF8E1);
+      textColor = const Color(0xFFF59E0B);
+      borderColor = const Color(0xFF453015);
+    } else {
+      bgColor = context.cardBg;
+      textColor = context.textColor;
+      borderColor = context.borderColor;
+    }
+
+    final isDisabled = isPast || isBooked || isHeld;
+
+    return GestureDetector(
+      onTap: isDisabled
+          ? () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('This time slot is unavailable.')),
+              );
+            }
+          : () => _showDurationBottomSheet(timeStr),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1.0),
+        ),
+        child: Center(
+          child: Text(
+            timeStr,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSlotLegend() {
-    final items = [
-      (const Color(0xFF27272A), Colors.white, const Color(0xFF3F3F46), 'Available'),
+    final legends = [
+      (context.cardBg, context.textColor, context.borderColor, 'Available'),
       (const Color(0xFFFF5200), Colors.white, const Color(0xFFFF5200), 'Selected'),
-      (const Color(0xFF2D1E22), const Color(0xFFE57373), const Color(0xFF4A252C), 'Booked'),
-      (const Color(0xFF221A0F), const Color(0xFFF59E0B), const Color(0xFF453015), 'Held'),
-      (const Color(0xFF18181B), const Color(0xFF52525B), const Color(0xFF27272A), 'Past'),
+      (context.isDark ? const Color(0xFF2D1E22) : const Color(0xFFFFEBEE), const Color(0xFFE57373), const Color(0xFF4A252C), 'Booked'),
+      (context.isDark ? const Color(0xFF221A0F) : const Color(0xFFFFF8E1), const Color(0xFFF59E0B), const Color(0xFF453015), 'Held'),
+      (context.isDark ? const Color(0xFF18181B) : const Color(0xFFEFEFF4), context.subTextColor, context.borderColor, 'Past'),
     ];
+
     return Wrap(
-      spacing: 14,
+      spacing: 16,
       runSpacing: 8,
-      children: items.map((item) {
+      children: legends.map((l) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 14,
-              height: 14,
+              width: 12,
+              height: 12,
               decoration: BoxDecoration(
-                color: item.$1,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: item.$3, width: 1.2),
+                color: l.$1,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: l.$3),
               ),
             ),
             const SizedBox(width: 6),
-            Text(item.$4, style: TextStyle(color: item.$2, fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(l.$4, style: TextStyle(color: context.subTextColor, fontSize: 11)),
           ],
         );
       }).toList(),
     );
   }
 
-  Widget _buildCardPill(String title, String value, {bool highlight = false}) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
+  Widget _buildStickyBottomBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, -4)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: _buildBottomBarContent(),
+      ),
+    );
+  }
+
+  Widget _buildBottomBarContent() {
+    final price = _calculatePrice();
+
+    return Row(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(title, style: const TextStyle(color: Colors.white60, fontSize: 9, letterSpacing: 0.5)),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: highlight ? const Color(0xFFE54F3F) : Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
+            Text('TOTAL PRICE', style: TextStyle(color: context.subTextColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+            const SizedBox(height: 2),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '₹$price',
+                  style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 4),
+                Text('/ ${_formatDuration(_durationMins)}', style: TextStyle(color: context.subTextColor, fontSize: 12)),
+              ],
             ),
           ],
         ),
-      ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: SizedBox(
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () {
+                if (_selectedStartTime == null) {
+                  final ctx = _slotAreaKey.currentContext;
+                  if (ctx != null) {
+                    Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select an available time slot first.')),
+                  );
+                } else {
+                  _proceedToReview();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE54F3F),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: Text(
+                _selectedStartTime == null ? 'Select Slot' : 'Book Now',
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

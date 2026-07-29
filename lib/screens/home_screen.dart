@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-
+import '../theme/app_theme.dart';
 import 'tabs/discover_tab.dart';
 import 'tabs/history_tab.dart';
 import 'tabs/account_tab.dart';
@@ -61,26 +61,27 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 720;
+    final bgColor = context.bgColor;
 
     final Widget scaffold = isWide
         ? Scaffold(
-            backgroundColor: const Color(0xFF161616),
+            backgroundColor: bgColor,
             body: Container(
-              color: const Color(0xFF161616),
+              color: bgColor,
               child: Row(
                 children: [
-                  // Side navigation rail matching exact mobile colors
+                  // Side navigation rail matching current theme
                   NavigationRail(
-                    backgroundColor: const Color(0xFF161616),
+                    backgroundColor: bgColor,
                     useIndicator: false,
                     indicatorColor: Colors.transparent,
                     selectedIndex: _currentIndex,
                     onDestinationSelected: (i) => setState(() => _currentIndex = i),
                     labelType: NavigationRailLabelType.all,
                     selectedIconTheme: const IconThemeData(color: Color(0xFFE54F3F), size: 26),
-                    unselectedIconTheme: const IconThemeData(color: Color(0xFF98989E), size: 24),
+                    unselectedIconTheme: IconThemeData(color: context.subTextColor, size: 24),
                     selectedLabelTextStyle: const TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold, fontSize: 12),
-                    unselectedLabelTextStyle: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
+                    unselectedLabelTextStyle: TextStyle(color: context.subTextColor, fontSize: 12),
                     destinations: const [
                       NavigationRailDestination(
                         icon: Icon(Icons.book_outlined),
@@ -99,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const VerticalDivider(width: 1, color: Color(0xFF2C2C2E)),
+                  VerticalDivider(width: 1, color: context.borderColor),
                   // Main content
                   Expanded(
                     child: SafeArea(
@@ -111,10 +112,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           )
         : Scaffold(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: bgColor,
             resizeToAvoidBottomInset: false,
             body: Container(
-              color: const Color(0xFF161616),
+              color: bgColor,
               child: SafeArea(
                 bottom: false,
                 child: Stack(
@@ -143,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomOverlay() {
+    final overlayColor = context.bgColor;
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
@@ -152,9 +154,9 @@ class _HomeScreenState extends State<HomeScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFF161616).withValues(alpha: 0.0),
-                const Color(0xFF161616).withValues(alpha: 0.65),
-                const Color(0xFF161616).withValues(alpha: 0.9),
+                overlayColor.withValues(alpha: 0.0),
+                overlayColor.withValues(alpha: 0.65),
+                overlayColor.withValues(alpha: 0.95),
               ],
               stops: const [0.0, 0.4, 1.0],
             ),
@@ -168,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                   selectedItemColor: const Color(0xFFE54F3F),
-                  unselectedItemColor: const Color(0xFF98989E),
+                  unselectedItemColor: context.subTextColor,
                   currentIndex: _currentIndex,
                   onTap: (index) => setState(() => _currentIndex = index),
                   type: BottomNavigationBarType.fixed,
@@ -198,3 +200,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

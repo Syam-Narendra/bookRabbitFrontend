@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/touchable_opacity.dart';
+import '../theme/app_theme.dart';
 
 import 'home_screen.dart';
 import 'booking_detail_screen.dart';
@@ -42,8 +43,12 @@ class BookingSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final heroGradientColors = context.isDark
+        ? [const Color(0xFF2C1C16), const Color(0xFF1E1410)]
+        : [const Color(0xFFFFF7F2), const Color(0xFFFFEAE0)];
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.bgColor,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 760;
@@ -55,11 +60,11 @@ class BookingSuccessScreen extends StatelessWidget {
                 Expanded(
                   flex: 5,
                   child: Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0xFFFFF7F2), Color(0xFFFFEAE0)],
+                        colors: heroGradientColors,
                       ),
                     ),
                     child: SafeArea(
@@ -97,7 +102,7 @@ class BookingSuccessScreen extends StatelessWidget {
                                       (route) => false,
                                     );
                                   },
-                                  child: const Icon(Icons.arrow_back, color: Color(0xFF1C1C1E), size: 28),
+                                  child: Icon(Icons.arrow_back, color: context.isDark ? Colors.white : const Color(0xFF1C1C1E), size: 28),
                                 ),
                                 const SizedBox(height: 24),
                                 Center(
@@ -106,7 +111,7 @@ class BookingSuccessScreen extends StatelessWidget {
                                       Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: context.cardBg,
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
@@ -119,16 +124,16 @@ class BookingSuccessScreen extends StatelessWidget {
                                         child: const Icon(Icons.check, color: Color(0xFFFF5200), size: 54),
                                       ).animate().scale(delay: 200.ms, curve: Curves.elasticOut),
                                       const SizedBox(height: 24),
-                                      const Text(
+                                      Text(
                                         'Booking Confirmed!',
                                         textAlign: TextAlign.center,
-                                        style: TextStyle(color: Color(0xFF1C1C1E), fontSize: 36, fontWeight: FontWeight.bold, height: 1.2),
+                                        style: TextStyle(color: context.isDark ? Colors.white : const Color(0xFF1C1C1E), fontSize: 36, fontWeight: FontWeight.bold, height: 1.2),
                                       ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
                                       const SizedBox(height: 12),
-                                      const Text(
+                                      Text(
                                         'Your booking has been confirmed successfully.',
                                         textAlign: TextAlign.center,
-                                        style: TextStyle(color: Color(0xFF666666), fontSize: 16, height: 1.4),
+                                        style: TextStyle(color: context.subTextColor, fontSize: 16, height: 1.4),
                                       ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                                     ],
                                   ),
@@ -145,7 +150,7 @@ class BookingSuccessScreen extends StatelessWidget {
                 Expanded(
                   flex: 6,
                   child: Container(
-                    color: Colors.white,
+                    color: context.bgColor,
                     child: Center(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
@@ -167,11 +172,11 @@ class BookingSuccessScreen extends StatelessWidget {
               Container(
                 height: 380,
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFFFFF7F2), Color(0xFFFFEAE0)],
+                    colors: heroGradientColors,
                   ),
                 ),
               ),
@@ -191,7 +196,7 @@ class BookingSuccessScreen extends StatelessWidget {
                                 (route) => false,
                               );
                             },
-                            child: const Icon(Icons.arrow_back, color: Color(0xFF1C1C1E)),
+                            child: Icon(Icons.arrow_back, color: context.isDark ? Colors.white : const Color(0xFF1C1C1E)),
                           ),
                         ],
                       ),
@@ -219,7 +224,7 @@ class BookingSuccessScreen extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: context.cardBg,
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
@@ -232,16 +237,16 @@ class BookingSuccessScreen extends StatelessWidget {
                                     child: const Icon(Icons.check, color: Color(0xFFFF5200), size: 44),
                                   ).animate().scale(delay: 200.ms, curve: Curves.elasticOut),
                                   const SizedBox(height: 16),
-                                  const Text(
+                                  Text(
                                     'Booking\nConfirmed!',
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(color: Color(0xFF1C1C1E), fontSize: 24, fontWeight: FontWeight.bold, height: 1.2),
+                                    style: TextStyle(color: context.isDark ? Colors.white : const Color(0xFF1C1C1E), fontSize: 24, fontWeight: FontWeight.bold, height: 1.2),
                                   ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
                                   const SizedBox(height: 8),
-                                  const Text(
+                                  Text(
                                     'Your booking has been\nconfirmed successfully.',
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(color: Color(0xFF666666), fontSize: 13, height: 1.3),
+                                    style: TextStyle(color: context.subTextColor, fontSize: 13, height: 1.3),
                                   ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                                 ],
                               ),
@@ -254,9 +259,9 @@ class BookingSuccessScreen extends StatelessWidget {
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+                        decoration: BoxDecoration(
+                          color: context.bgColor,
+                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
                         ),
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.only(bottom: 32),
@@ -280,14 +285,14 @@ class BookingSuccessScreen extends StatelessWidget {
         // Booking ID
         Container(
           padding: const EdgeInsets.all(10),
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFF2E6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF5200).withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.calendar_today_outlined, color: Color(0xFFFF5200), size: 20),
         ),
         const SizedBox(height: 8),
-        const Text('BOOKING ID', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 12, fontWeight: FontWeight.w600)),
+        Text('BOOKING ID', style: TextStyle(color: context.subTextColor, fontSize: 12, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
         Text(
           referenceId ?? 'BRB-PENDING',
@@ -307,7 +312,7 @@ class BookingSuccessScreen extends StatelessWidget {
                 return SizedBox(
                   width: dashWidth,
                   height: dashHeight,
-                  child: const DecoratedBox(decoration: BoxDecoration(color: Color(0xFFE0E0E0))),
+                  child: DecoratedBox(decoration: BoxDecoration(color: context.borderColor)),
                 );
               }),
             );
@@ -332,14 +337,14 @@ class BookingSuccessScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(ground['title'] ?? '', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(ground['title'] ?? '', style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Icon(Icons.location_on_outlined, color: Color(0xFFFF5200), size: 16),
                       const SizedBox(width: 4),
-                      Expanded(child: Text(ground['location'] ?? '', style: const TextStyle(color: Color(0xFF8C8C8C), fontSize: 13))),
+                      Expanded(child: Text(ground['location'] ?? '', style: TextStyle(color: context.subTextColor, fontSize: 13))),
                     ],
                   ),
                 ],
@@ -352,7 +357,7 @@ class BookingSuccessScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFFFAF2ED),
+            color: context.subCardBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -367,18 +372,18 @@ class BookingSuccessScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('DATE', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text('DATE', style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Text(DateFormat('dd MMM yyyy').format(date), style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold)),
+                          Text(DateFormat('dd MMM yyyy').format(date), style: TextStyle(color: context.textColor, fontSize: 13, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 2),
-                          Text(DateFormat('EEEE').format(date), style: const TextStyle(color: Color(0xFF8C8C8C), fontSize: 12)),
+                          Text(DateFormat('EEEE').format(date), style: TextStyle(color: context.subTextColor, fontSize: 12)),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(width: 1, height: 40, color: const Color(0xFFE5D5C5)),
+              Container(width: 1, height: 40, color: context.borderColor),
               const SizedBox(width: 16),
               Expanded(
                 child: Row(
@@ -390,11 +395,11 @@ class BookingSuccessScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('TIME', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text('TIME', style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Text('$startTime – $endTime', style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold), maxLines: 2),
+                          Text('$startTime – $endTime', style: TextStyle(color: context.textColor, fontSize: 13, fontWeight: FontWeight.bold), maxLines: 2),
                           const SizedBox(height: 2),
-                          Text(_calculateDuration(startTime, endTime), style: const TextStyle(color: Color(0xFF8C8C8C), fontSize: 12)),
+                          Text(_calculateDuration(startTime, endTime), style: TextStyle(color: context.subTextColor, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -431,16 +436,16 @@ class BookingSuccessScreen extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardBg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE0E0E0)),
+              border: Border.all(color: context.borderColor),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFF2E6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5200).withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFFFF5200), size: 20),
@@ -449,15 +454,15 @@ class BookingSuccessScreen extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Payment Status', style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 12)),
-                      Text('Paid Successfully', style: TextStyle(color: Color(0xFF00A859), fontSize: 14, fontWeight: FontWeight.bold)),
+                    children: [
+                      Text('Payment Status', style: TextStyle(color: context.subTextColor, fontSize: 12)),
+                      const Text('Paid Successfully', style: TextStyle(color: Color(0xFF00A859), fontSize: 14, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
-                Text('₹$finalPrice', style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+                Text('₹$finalPrice', style: TextStyle(color: context.textColor, fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: Color(0xFF8C8C8C)),
+                Icon(Icons.chevron_right, color: context.subTextColor),
               ],
             ),
           ),
@@ -467,17 +472,17 @@ class BookingSuccessScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFFFAF2ED),
+            color: context.subCardBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Image.asset('assets/images/whatsapp.png', width: 24, height: 24, errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat_bubble_outline, color: Color(0xFFFF5200), size: 24)),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'A confirmation has been sent to your WhatsApp with booking details.',
-                  style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.4),
+                  style: TextStyle(color: context.textColor, fontSize: 13, height: 1.4),
                 ),
               ),
             ],
@@ -526,7 +531,7 @@ class BookingSuccessScreen extends StatelessWidget {
             width: double.infinity,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardBg,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFFF5200)),
             ),
@@ -555,9 +560,9 @@ class BookingSuccessScreen extends StatelessWidget {
                 }
               },
               child: RichText(
-                text: const TextSpan(
-                  style: TextStyle(color: Color(0xFF8C8C8C), fontSize: 13),
-                  children: [
+                text: TextSpan(
+                  style: TextStyle(color: context.subTextColor, fontSize: 13),
+                  children: const [
                     TextSpan(text: 'Need help? '),
                     TextSpan(text: 'Contact support', style: TextStyle(color: Color(0xFFFF5200), fontWeight: FontWeight.w600)),
                   ],
@@ -570,3 +575,4 @@ class BookingSuccessScreen extends StatelessWidget {
     ).animate().fade(delay: 500.ms).slideY(begin: 0.1);
   }
 }
+

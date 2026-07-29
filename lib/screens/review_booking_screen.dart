@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../services/booking_service.dart';
 import '../services/razorpay_web/razorpay_web_helper.dart';
+import '../theme/app_theme.dart';
 import '../widgets/touchable_opacity.dart';
 import 'booking_success_screen.dart';
 
@@ -58,69 +59,78 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     _razorpay.clear();
   }
 
-  // Converts a "H:MM AM/PM" display string (as produced by ground_details_screen)
-  // to 24-hour "HH:MM", the format booking-order.ts expects.
-  String _to24Hour(String time12) {
-    final parts = time12.split(' ');
-    final timeParts = parts[0].split(':');
-    int hours = int.parse(timeParts[0]);
-    final mins = timeParts[1];
-    final isPM = parts[1] == 'PM';
-    if (isPM && hours != 12) hours += 12;
-    if (!isPM && hours == 12) hours = 0;
-    return '${hours.toString().padLeft(2, '0')}:$mins';
+  static String _to24Hour(String time12) {
+    try {
+      final dateTime = DateFormat('hh:mm a').parse(time12);
+      return DateFormat('HH:mm').format(dateTime);
+    } catch (_) {
+      return time12;
+    }
   }
 
   Future<void> _startPayment() async {
     setState(() => _isCreatingOrder = true);
     try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(widget.date);
+      final startTime24 = _to24Hour(widget.startTime);
+      final endTime24 = _to24Hour(widget.endTime);
+
       final order = await BookingService.createOrder(
         groundId: widget.ground['id'] as String,
-        date: DateFormat('yyyy-MM-dd').format(widget.date),
-        startTime: _to24Hour(widget.startTime),
-        endTime: _to24Hour(widget.endTime),
+        date: dateStr,
+        startTime: startTime24,
+        endTime: endTime24,
       );
+
+      if (!mounted) return;
       _order = order;
+      setState(() => _isCreatingOrder = false);
 
       final options = {
         'key': AppConstants.razorpayKey,
         'order_id': order.orderId,
         'amount': (order.totalAmount * 100).round(),
         'name': 'Book Rabbit',
-        'description': 'Booking for ${widget.ground['title']}',
+        'description': '${widget.ground['title']} Booking',
         'prefill': {
-          'contact': AuthService.currentUser?.phoneNumber ?? '9876543210',
-          'name': AuthService.currentUser?.fullName ?? '',
+          'contact': AuthService.currentUser?.phoneNumber ?? '',
         },
+        'theme': {'color': '#E54F3F'},
       };
 
       if (kIsWeb) {
         launchRazorpayWebCheckout(
           options: options,
-          onSuccess: (paymentId, orderId, signature) {
-            _onWebPaymentSuccess(paymentId, orderId, signature);
-          },
-          onError: (code, message) {
-            _onWebPaymentError(message);
-          },
+          onSuccess: (paymentId, orderId, signature) =>
+              _handleWebPaymentSuccess(paymentId, orderId, signature),
+          onError: (code, message) => _onWebPaymentError(message),
         );
       } else {
         _razorpay.open(options);
       }
     } on ApiException catch (e) {
       if (!mounted) return;
+      setState(() => _isCreatingOrder = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
           backgroundColor: const Color(0xFFD32F2F),
         ),
       );
-    } finally {
-      if (mounted) setState(() => _isCreatingOrder = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isCreatingOrder = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to initiate payment. Please try again.'),
+          backgroundColor: Color(0xFFD32F2F),
+        ),
+      );
     }
   }
 
-  Future<void> _onWebPaymentSuccess(String paymentId, String orderId, String signature) async {
+  Future<void> _handleWebPaymentSuccess(
+      String paymentId, String orderId, String signature) async {
     try {
       final referenceId = await BookingService.verifyPayment(
         razorpayPaymentId: paymentId,
@@ -233,11 +243,11 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: context.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text('Review Booking', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: context.bgColor,
+        title: Text('Review Booking', style: TextStyle(color: context.textColor)),
+        iconTheme: IconThemeData(color: context.textColor),
         elevation: 0,
       ),
       body: SafeArea(
@@ -255,12 +265,12 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Booking Summary', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))
+                      Text('Booking Summary', style: TextStyle(color: context.textColor, fontSize: 24, fontWeight: FontWeight.bold))
                           .animate().fade(duration: 300.ms).slideY(begin: 0.1),
                       const SizedBox(height: 24),
                       _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
                       const SizedBox(height: 24),
-                      const Text('Payment Details', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))
+                      Text('Payment Details', style: TextStyle(color: context.textColor, fontSize: 20, fontWeight: FontWeight.bold))
                           .animate().fade(delay: 200.ms).slideY(begin: 0.1),
                       const SizedBox(height: 16),
                       _buildPaymentCard().animate().fade(delay: 300.ms).slideY(begin: 0.1),
@@ -314,17 +324,17 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
+        color: context.cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF38383A)),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.ground['title'], style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(widget.ground['title'], style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']}', style: const TextStyle(color: Color(0xFF98989E), fontSize: 14)),
-          const Divider(color: Color(0xFF38383A), height: 24),
+          Text('${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']}', style: TextStyle(color: context.subTextColor, fontSize: 14)),
+          Divider(color: context.borderColor, height: 24),
           _buildIconDetail(Icons.calendar_today, DateFormat('EEEE, MMM d, yyyy').format(widget.date)),
           const SizedBox(height: 12),
           Row(
@@ -343,32 +353,32 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
+        color: context.cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF38383A)),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Ground Fare', style: TextStyle(color: Colors.white70, fontSize: 16)),
-              Text('₹${widget.fare}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+              Text('Ground Fare', style: TextStyle(color: context.subTextColor, fontSize: 16)),
+              Text('₹${widget.fare}', style: TextStyle(color: context.textColor, fontSize: 16)),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Platform Fee', style: TextStyle(color: Colors.white70, fontSize: 16)),
-              Text('₹${widget.platformFee}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+              Text('Platform Fee', style: TextStyle(color: context.subTextColor, fontSize: 16)),
+              Text('₹${widget.platformFee}', style: TextStyle(color: context.textColor, fontSize: 16)),
             ],
           ),
-          const Divider(color: Color(0xFF38383A), height: 32),
+          Divider(color: context.borderColor, height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total to Pay', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('Total to Pay', style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold)),
               Text('₹${widget.finalPrice}', style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
@@ -382,7 +392,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       children: [
         Icon(icon, color: const Color(0xFFE54F3F), size: 18),
         const SizedBox(width: 8),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+        Text(text, style: TextStyle(color: context.textColor, fontSize: 14, fontWeight: FontWeight.w500)),
       ],
     );
   }

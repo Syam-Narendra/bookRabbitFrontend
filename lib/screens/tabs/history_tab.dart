@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/booking_service.dart';
+import '../../theme/app_theme.dart';
 import '../booking_detail_screen.dart';
 import '../../widgets/touchable_opacity.dart';
 
@@ -69,9 +70,9 @@ class _HistoryTabState extends State<HistoryTab> {
                 // Header — always visible
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: const Text(
+                  child: Text(
                     'History',
-                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: context.textColor, fontSize: 28, fontWeight: FontWeight.bold),
                   ).animate().fade(duration: 350.ms).slideX(begin: -0.05, end: 0, curve: Curves.easeOutCubic),
                 ),
 
@@ -95,7 +96,7 @@ class _HistoryTabState extends State<HistoryTab> {
                         child: Text(
                           tab,
                           style: TextStyle(
-                            color: isSelected ? Colors.white : const Color(0xFF98989E),
+                            color: isSelected ? context.textColor : context.subTextColor,
                             fontSize: 14,
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                           ),
@@ -115,10 +116,10 @@ class _HistoryTabState extends State<HistoryTab> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.wifi_off_rounded, color: Color(0xFF52525B), size: 48),
+                              Icon(Icons.wifi_off_rounded, color: context.subTextColor, size: 48),
                               const SizedBox(height: 16),
-                              const Text('Failed to load bookings',
-                                  style: TextStyle(color: Colors.white70, fontSize: 16)),
+                              Text('Failed to load bookings',
+                                  style: TextStyle(color: context.subTextColor, fontSize: 16)),
                               const SizedBox(height: 12),
                               ElevatedButton(
                                 onPressed: _fetchBookings,
@@ -135,15 +136,15 @@ class _HistoryTabState extends State<HistoryTab> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.calendar_today_outlined,
-                                    color: Color(0xFF52525B), size: 48),
+                                Icon(Icons.calendar_today_outlined,
+                                    color: context.subTextColor, size: 48),
                                 const SizedBox(height: 16),
                                 Text(
                                   _selectedHistoryTab == 'All'
                                       ? 'No bookings found.'
                                       : 'No ${_selectedHistoryTab.toLowerCase()} bookings found.',
-                                  style: const TextStyle(
-                                      color: Color(0xFF98989E),
+                                  style: TextStyle(
+                                      color: context.subTextColor,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500),
                                 ),
@@ -155,26 +156,26 @@ class _HistoryTabState extends State<HistoryTab> {
                             children: _selectedHistoryTab == 'All'
                               ? [
                                   if (mockBookings.any((b) => b['status'] == 'Upcoming')) ...[
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12.0),
                                       child: Text('Upcoming bookings',
-                                          style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                          style: TextStyle(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.bold)),
                                     ).animate().fade(delay: 150.ms),
                                     ...mockBookings.where((b) => b['status'] == 'Upcoming').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
                                   ],
                                   if (mockBookings.any((b) => b['status'] == 'Completed')) ...[
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12.0),
                                       child: Text('Completed bookings',
-                                          style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                          style: TextStyle(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.bold)),
                                     ).animate().fade(delay: 150.ms),
                                     ...mockBookings.where((b) => b['status'] == 'Completed').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
                                   ],
                                   if (mockBookings.any((b) => b['status'] == 'Cancelled')) ...[
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12.0),
                                       child: Text('Cancelled bookings',
-                                          style: TextStyle(color: Color(0xFF98989E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                          style: TextStyle(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.bold)),
                                     ).animate().fade(delay: 150.ms),
                                     ...mockBookings.where((b) => b['status'] == 'Cancelled').toList().asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
                                   ],
@@ -198,13 +199,13 @@ class _HistoryTabState extends State<HistoryTab> {
       itemCount: 5,
       itemBuilder: (context, i) {
         return Shimmer.fromColors(
-          baseColor: const Color(0xFF2C2C2E),
-          highlightColor: const Color(0xFF3A3A3C),
+          baseColor: context.subCardBg,
+          highlightColor: context.isDark ? const Color(0xFF3A3A3C) : const Color(0xFFE5E5EA),
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF222224),
+              color: context.cardBg,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -214,7 +215,7 @@ class _HistoryTabState extends State<HistoryTab> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.subCardBg,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -223,13 +224,13 @@ class _HistoryTabState extends State<HistoryTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(height: 14, width: double.infinity, color: Colors.white),
+                      Container(height: 14, width: double.infinity, color: context.subCardBg),
                       const SizedBox(height: 8),
-                      Container(height: 12, width: 100, color: Colors.white),
+                      Container(height: 12, width: 100, color: context.subCardBg),
                       const SizedBox(height: 8),
-                      Container(height: 12, width: 140, color: Colors.white),
+                      Container(height: 12, width: 140, color: context.subCardBg),
                       const SizedBox(height: 6),
-                      Container(height: 12, width: 100, color: Colors.white),
+                      Container(height: 12, width: 100, color: context.subCardBg),
                     ],
                   ),
                 ),
@@ -237,11 +238,11 @@ class _HistoryTabState extends State<HistoryTab> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(height: 22, width: 70, color: Colors.white),
+                    Container(height: 22, width: 70, color: context.subCardBg),
                     const SizedBox(height: 16),
-                    Container(height: 12, width: 50, color: Colors.white),
+                    Container(height: 12, width: 50, color: context.subCardBg),
                     const SizedBox(height: 4),
-                    Container(height: 20, width: 60, color: Colors.white),
+                    Container(height: 20, width: 60, color: context.subCardBg),
                   ],
                 ),
               ],
@@ -279,9 +280,9 @@ class _HistoryTabState extends State<HistoryTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF222224),
+        color: context.cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF2C2C2E)),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -299,29 +300,29 @@ class _HistoryTabState extends State<HistoryTab> {
               children: [
                 Text(
                   booking['title'],
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: context.textColor, fontSize: 15, fontWeight: FontWeight.bold),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   booking['type'],
-                  style: const TextStyle(color: Color(0xFF98989E), fontSize: 12),
+                  style: TextStyle(color: context.subTextColor, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today_outlined, color: Color(0xFF98989E), size: 12),
+                    Icon(Icons.calendar_today_outlined, color: context.subTextColor, size: 12),
                     const SizedBox(width: 6),
-                    Text(booking['date'], style: const TextStyle(color: Color(0xFF98989E), fontSize: 12)),
+                    Text(booking['date'], style: TextStyle(color: context.subTextColor, fontSize: 12)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.schedule, color: Color(0xFF98989E), size: 12),
+                    Icon(Icons.schedule, color: context.subTextColor, size: 12),
                     const SizedBox(width: 6),
-                    Text(booking['time'], style: const TextStyle(color: Color(0xFF98989E), fontSize: 12)),
+                    Text(booking['time'], style: TextStyle(color: context.subTextColor, fontSize: 12)),
                   ],
                 ),
               ],
@@ -344,15 +345,15 @@ class _HistoryTabState extends State<HistoryTab> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text('Total Amount', style: TextStyle(color: Color(0xFF98989E), fontSize: 10)),
+              Text('Total Amount', style: TextStyle(color: context.subTextColor, fontSize: 10)),
               Row(
                 children: [
                   Text(
                     booking['price'],
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right, color: Color(0xFF98989E), size: 20),
+                  Icon(Icons.chevron_right, color: context.subTextColor, size: 20),
                 ],
               ),
             ],
@@ -398,7 +399,7 @@ class _HistoryTabState extends State<HistoryTab> {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: const Color(0xFF2C2C2E),
+            color: context.subCardBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
@@ -417,3 +418,4 @@ class _HistoryTabState extends State<HistoryTab> {
     );
   }
 }
+
