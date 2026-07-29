@@ -22,6 +22,7 @@ class DiscoverTab extends StatefulWidget {
 }
 
 class _DiscoverTabState extends State<DiscoverTab> {
+  final TextEditingController _topSearchController = TextEditingController();
   String _searchQuery = '';
   String _selectedCategory = 'All';
   List<Map<String, dynamic>> allGrounds = [];
@@ -47,7 +48,6 @@ class _DiscoverTabState extends State<DiscoverTab> {
     {'name': 'Pickleball', 'icon': Icons.sports_tennis},
     {'name': 'Basketball', 'icon': Icons.sports_basketball},
     {'name': 'Volleyball', 'icon': Icons.sports_volleyball},
-    {'name': 'Swimming', 'icon': Icons.pool},
   ];
 
   Timer? _searchDebounce;
@@ -61,6 +61,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   @override
   void dispose() {
+    _topSearchController.dispose();
     _searchDebounce?.cancel();
     _positionStream?.cancel();
     super.dispose();
@@ -683,19 +684,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
           child: LayoutBuilder(
                       builder: (context, constraints) {
                         final w = constraints.maxWidth;
-                        final cols = w >= 1100 ? 5
-                            : w >= 720 ? 4
-                            : w >= 540 ? 3
-                            : 2;
+                        final cols = w >= 1100 ? 6
+                            : w >= 720 ? 5
+                            : w >= 540 ? 4
+                            : 3;
 
-                        final spacing = w >= 720 ? 14.0 : 12.0;
+                        final spacing = w >= 720 ? 12.0 : 10.0;
 
-                        final aspectRatio = w >= 1100 ? 0.88
-                            : w >= 720 ? 0.82
-                            : w >= 540 ? 0.78
-                            : 0.66;
+                        final aspectRatio = 0.72; // Compact proportions for smaller card height and width
 
-                        final bottomPad = w >= 720 ? 24.0 : 140.0;
+                        final bottomPad = w >= 720 ? 24.0 : 72.0;
 
                         final gridDelegate =
                             SliverGridDelegateWithFixedCrossAxisCount(
@@ -807,135 +805,179 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   // ─── Header ───────────────────────────────────────────────────────────────────
 
+  // ─── Header ───────────────────────────────────────────────────────────────────
+
   Widget _buildHeader({bool isWide = false}) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, isWide ? 8 : 16, 16, isWide ? 10 : 24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: _showLocationPickerBottomSheet,
-              behavior: HitTestBehavior.opaque,
-              child: Row(
+    const mascotAsset = 'assets/images/rabbit_support_half.png';
+    const fallbackMascot = 'assets/images/rabbit_support.png';
+
+    final headerHeight = isWide ? 145.0 : 135.0;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        // 1. Top Orange Header Banner with Location & Mascot Rabbit
+        Container(
+          width: double.infinity,
+          height: headerHeight,
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFF7A2F), Color(0xFFF2693F)],
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(28),
+              bottomRight: Radius.circular(28),
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(28),
+              bottomRight: Radius.circular(28),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Stack(
                 children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (_isDetectingLocation)
-                        Container(
-                          width: isWide ? 28 : 36,
-                          height: isWide ? 28 : 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE54F3F)
-                                .withValues(alpha: 0.18),
-                            shape: BoxShape.circle,
-                          ),
-                        )
-                            .animate(onPlay: (c) => c.repeat())
-                            .scale(
-                              begin: const Offset(1, 1),
-                              end: const Offset(1.4, 1.4),
-                              duration:
-                                  const Duration(milliseconds: 900),
-                              curve: Curves.easeInOut,
-                            )
-                            .then()
-                            .scale(
-                              begin: const Offset(1.4, 1.4),
-                              end: const Offset(1, 1),
-                              duration:
-                                  const Duration(milliseconds: 900),
-                              curve: Curves.easeInOut,
-                            ),
-                      Container(
-                        width: isWide ? 30 : 36,
-                        height: isWide ? 30 : 36,
-                        decoration: BoxDecoration(
-                          color: _isDetectingLocation
-                              ? const Color(0xFFE54F3F)
-                                  .withValues(alpha: 0.15)
-                              : context.subCardBg,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _isDetectingLocation
-                              ? Icons.gps_fixed
-                              : Icons.location_on,
-                          color: _isDetectingLocation
-                              ? const Color(0xFFE54F3F)
-                              : context.textColor,
-                          size: 20,
+                  // Mascot Rabbit image anchored at top right
+                  Positioned(
+                    top: 0,
+                    right: isWide ? 16 : 8,
+                    child: Image.asset(
+                      mascotAsset,
+                      height: isWide ? 130 : 110,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.topRight,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        fallbackMascot,
+                        height: isWide ? 130 : 110,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.topRight,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          'assets/images/sports_bunnies.png',
+                          height: isWide ? 130 : 110,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.topRight,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: AnimatedSwitcher(
-                                duration:
-                                    const Duration(milliseconds: 400),
-                                child: Text(
-                                  _locationArea,
-                                  key: ValueKey(_locationArea),
-                                  style: TextStyle(
-                                    color: context.textColor,
-                                    fontSize: isWide ? 15 : 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(Icons.keyboard_arrow_down,
-                                color: context.textColor, size: 18),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 400),
-                          child: Text(
-                            _locationAddress,
-                            key: ValueKey(_locationAddress),
-                            style: TextStyle(
-                                color: context.subTextColor, fontSize: isWide ? 11 : 13),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
                     ),
+                  ),
+
+                  // Location Row Content
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, isWide ? 12 : 16, isWide ? 140 : 110, 12),
+                    child: _buildLocationRow(isWide: isWide),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: widget.onProfileTapped,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: context.subCardBg,
-                shape: BoxShape.circle,
-                image: DecorationImage(
-                  image: NetworkImage(
-                    AuthService.currentUser?.profileImageUrl ??
-                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+        ),
+
+        // 2. Search Bar positioned EXACTLY DOWN / BELOW the Rabbit Header
+        Positioned(
+          bottom: 0,
+          left: 16,
+          right: 16,
+          child: _buildTopSearch(isWide: isWide),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationRow({bool isWide = false}) {
+    return GestureDetector(
+      onTap: _showLocationPickerBottomSheet,
+      behavior: HitTestBehavior.deferToChild,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              if (_isDetectingLocation)
+                Container(
+                  width: isWide ? 28 : 36,
+                  height: isWide ? 28 : 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
                   ),
-                  fit: BoxFit.cover,
+                )
+                    .animate(onPlay: (c) => c.repeat())
+                    .scale(
+                      begin: const Offset(1, 1),
+                      end: const Offset(1.4, 1.4),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeInOut,
+                    )
+                    .then()
+                    .scale(
+                      begin: const Offset(1.4, 1.4),
+                      end: const Offset(1, 1),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeInOut,
+                    ),
+              Container(
+                width: isWide ? 32 : 38,
+                height: isWide ? 32 : 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _isDetectingLocation ? Icons.gps_fixed : Icons.location_on,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: Text(
+                      _locationArea,
+                      key: ValueKey(_locationArea),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isWide ? 16 : 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
+                ],
+              ),
+              const SizedBox(height: 2),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                child: Text(
+                  _locationAddress,
+                  key: ValueKey(_locationAddress),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: isWide ? 11 : 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -945,35 +987,50 @@ class _DiscoverTabState extends State<DiscoverTab> {
   // ─── Search ───────────────────────────────────────────────────────────────────
 
   Widget _buildTopSearch({bool isWide = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        height: isWide ? 40 : 48,
-        decoration: BoxDecoration(
-          color: context.subCardBg,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 16),
-            Icon(Icons.search, color: context.subTextColor, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                style: TextStyle(color: context.textColor, fontSize: isWide ? 14 : 16),
-                decoration: InputDecoration(
-                  hintText: 'Search by ground name or sport',
-                  hintStyle: TextStyle(color: context.subTextColor, fontSize: isWide ? 14 : 16),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onChanged: (value) =>
-                    setState(() => _searchQuery = value),
+    return Container(
+      height: isWide ? 46 : 50,
+      decoration: BoxDecoration(
+        color: context.isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          const Icon(Icons.search, color: Color(0xFFF2693F), size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _topSearchController,
+              style: TextStyle(color: context.textColor, fontSize: isWide ? 14 : 15, fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: 'Search grounds or sports...',
+                hintStyle: TextStyle(color: context.subTextColor, fontSize: isWide ? 14 : 15),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _topSearchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Icon(Icons.close, color: Color(0xFFF2693F), size: 18),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

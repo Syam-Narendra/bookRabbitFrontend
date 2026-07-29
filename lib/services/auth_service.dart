@@ -55,6 +55,18 @@ class AuthService {
     return user;
   }
 
+  static Future<AppUser> updateProfileImageBytes(List<int> bytes, String filename) async {
+    final data = await ApiClient.uploadBytes(
+      '/api/mobile/me/photo',
+      fieldName: 'image',
+      bytes: bytes,
+      filename: filename,
+    ) as Map<String, dynamic>;
+    final user = AppUser.fromJson(data['user'] as Map<String, dynamic>);
+    currentUser = user;
+    return user;
+  }
+
   static Future<void> logout() async {
     try {
       await ApiClient.post('/api/mobile/logout');

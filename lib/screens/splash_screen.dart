@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import '../services/auth_service.dart';
@@ -27,7 +28,14 @@ class _SplashScreenState extends State<SplashScreen> {
     await precacheImage(const AssetImage('assets/images/sports_bunnies.png'), context).catchError((_) {});
 
     // Remove native splash seamlessly once Flutter has rendered its first frame and image is ready
-    FlutterNativeSplash.remove();
+    // Use Object catch to handle both Exception and PlatformException (web throws PlatformException)
+    try {
+      FlutterNativeSplash.remove();
+    } on PlatformException catch (_) {
+      // Web: flutter_native_splash not generated for web, safe to ignore
+    } catch (_) {
+      // Any other error removing splash — safe to ignore
+    }
 
     // Restore auth session
     final isLoggedIn = await AuthService.restoreSession();

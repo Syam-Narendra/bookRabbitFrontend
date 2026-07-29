@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -79,9 +80,8 @@ class _AccountTabState extends State<AccountTab> {
     );
     if (pickedFile == null) return;
 
-    final file = File(pickedFile.path);
-    final sizeBytes = await file.length();
-    if (sizeBytes > 8 * 1024 * 1024) {
+    final bytes = await pickedFile.readAsBytes();
+    if (bytes.length > 8 * 1024 * 1024) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -94,13 +94,26 @@ class _AccountTabState extends State<AccountTab> {
 
     setState(() => _isUploadingPhoto = true);
     try {
-      await AuthService.updateProfileImage(file);
+      await AuthService.updateProfileImageBytes(bytes, pickedFile.name);
       if (!mounted) return;
       setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo updated successfully!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to upload photo. Please try again.'), backgroundColor: Colors.redAccent),
       );
     } finally {
       if (mounted) setState(() => _isUploadingPhoto = false);
@@ -273,7 +286,7 @@ class _AccountTabState extends State<AccountTab> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 720;
-        final bottomPad = isWide ? 40.0 : 140.0;
+        final bottomPad = isWide ? 40.0 : 72.0;
 
         if (isWide) {
           return Align(
@@ -300,6 +313,8 @@ class _AccountTabState extends State<AccountTab> {
                           _buildStatsSection(),
                           const SizedBox(height: 24),
                           _buildMenuOptions(),
+                          const SizedBox(height: 16),
+                          _buildBrandFooter(),
                         ],
                       ),
                     ),
@@ -349,11 +364,260 @@ class _AccountTabState extends State<AccountTab> {
                 _buildMenuOptions(),
                 const SizedBox(height: 24),
                 _buildInviteBanner().animate().fade(delay: 700.ms).scale(),
+                const SizedBox(height: 16),
+                _buildBrandFooter(),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBrandFooter() {
+    final isDark = context.isDark;
+    final cardBg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    final borderCol = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF0F0F0);
+    const accentOrange = Color(0xFFFF5200);
+    final watermarkColor = accentOrange.withValues(alpha: 0.10);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24, bottom: 28),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 580),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: borderCol, width: 1.2),
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              children: [
+                // Background Line Art Icons Watermarks
+                Positioned(
+                  left: 14,
+                  top: 36,
+                  child: Icon(Icons.sports_cricket_outlined, size: 36, color: watermarkColor),
+                ),
+                Positioned(
+                  left: 16,
+                  bottom: 46,
+                  child: Icon(Icons.sports_soccer_outlined, size: 36, color: watermarkColor),
+                ),
+                Positioned(
+                  right: 14,
+                  top: 36,
+                  child: Icon(Icons.sports_tennis_outlined, size: 36, color: watermarkColor),
+                ),
+                Positioned(
+                  right: 16,
+                  bottom: 46,
+                  child: Icon(Icons.sports_basketball_outlined, size: 36, color: watermarkColor),
+                ),
+
+                // Main Content Column
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 1. Mascot Image (assets/images/footer_logo.png)
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 104,
+                            height: 104,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: accentOrange.withValues(alpha: 0.06),
+                            ),
+                          ),
+                          Image.asset(
+                            'assets/images/footer_logo.png',
+                            width: 96,
+                            height: 96,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/images/sports_bunnies.png',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          // Small sparkle accents
+                          Positioned(
+                            left: 0,
+                            top: 14,
+                            child: Text('✦', style: TextStyle(color: accentOrange.withValues(alpha: 0.6), fontSize: 10)),
+                          ),
+                          Positioned(
+                            right: 0,
+                            top: 24,
+                            child: Text('✦', style: TextStyle(color: accentOrange.withValues(alpha: 0.6), fontSize: 8)),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 2. Book Rabbit Brand Logo & Title
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.cruelty_free, size: 26, color: Color(0xFFFF5200)),
+                          const SizedBox(width: 8),
+                          RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Book ',
+                                  style: TextStyle(color: context.textColor),
+                                ),
+                                const TextSpan(
+                                  text: 'Rabbit',
+                                  style: TextStyle(color: Color(0xFFFF5200)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // 3. "A RABBIT PRODUCT" Subtitle with Side Lines
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(width: 24, height: 1.2, color: accentOrange.withValues(alpha: 0.4)),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'A RABBIT PRODUCT',
+                            style: TextStyle(
+                              color: Color(0xFF666666),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.0,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(width: 24, height: 1.2, color: accentOrange.withValues(alpha: 0.4)),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 4. "Made with ❤️ for sports lovers" Row with Triple Dots
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _tripleDots(accentOrange),
+                          const SizedBox(width: 14),
+                          Text(
+                            'Made with ❤️ for sports lovers',
+                            style: TextStyle(
+                              color: context.subTextColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          _tripleDots(accentOrange),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Hairline Separator Line
+                      Divider(height: 1, thickness: 1, color: borderCol),
+
+                      const SizedBox(height: 16),
+
+                      // 5. Version Pill Badge at Bottom
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: accentOrange.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: accentOrange.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: accentOrange.withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.shield_outlined, size: 14, color: accentOrange),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'v1.0.0',
+                                  style: TextStyle(
+                                    color: context.textColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: accentOrange.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tripleDots(Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 4, height: 4, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.3))),
+        const SizedBox(width: 4),
+        Container(width: 5, height: 5, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+        const SizedBox(width: 4),
+        Container(width: 4, height: 4, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.3))),
+      ],
     );
   }
 
@@ -371,45 +635,80 @@ class _AccountTabState extends State<AccountTab> {
           onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
           child: Stack(
             children: [
-              CircleAvatar(
-                radius: 44,
-                backgroundImage: NetworkImage(
-                  AuthService.currentUser?.profileImageUrl ??
-                      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000&auto=format&fit=crop',
+              Container(
+                padding: const EdgeInsets.all(2.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFFF5200), width: 1.5),
+                ),
+                child: CircleAvatar(
+                  radius: 42,
+                  backgroundImage: NetworkImage(
+                    AuthService.currentUser?.profileImageUrl ??
+                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000&auto=format&fit=crop',
+                  ),
                 ),
               ),
               Positioned(
-                bottom: 0,
-                right: 0,
+                bottom: 2,
+                right: 2,
                 child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: context.subCardBg,
+                  padding: const EdgeInsets.all(7),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF5200),
                     shape: BoxShape.circle,
                   ),
                   child: _isUploadingPhoto
-                      ? SizedBox(
+                      ? const SizedBox(
                           width: 14,
                           height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: context.textColor),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : Icon(Icons.camera_alt, color: context.textColor, size: 14),
+                      : const Icon(Icons.camera_alt, color: Colors.white, size: 14),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 20),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Replace photo',
-              style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold),
+            InkWell(
+              onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5200).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFF5200).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isUploadingPhoto) ...[
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF5200)),
+                      ),
+                      const SizedBox(width: 8),
+                    ] else ...[
+                      const Icon(Icons.file_upload_outlined, color: Color(0xFFFF5200), size: 18),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      _isUploadingPhoto ? 'Uploading...' : 'Replace photo',
+                      style: const TextStyle(color: Color(0xFFFF5200), fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
-              'JPG, PNG or WebP. Max 2MB.',
+              'JPG, PNG or WebP. Max 8MB.',
               style: TextStyle(color: context.subTextColor, fontSize: 12),
             ),
           ],
@@ -798,5 +1097,54 @@ class _AccountTabState extends State<AccountTab> {
       ),
     );
   }
+}
+
+class ArcFooterPainter extends CustomPainter {
+  final Color color;
+
+  ArcFooterPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint arcPaint = Paint()
+      ..color = color.withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+
+    // Top subtle upward arc
+    final Path topArc = Path();
+    topArc.moveTo(8, size.height * 0.18);
+    topArc.quadraticBezierTo(
+      size.width / 2,
+      -6,
+      size.width - 8,
+      size.height * 0.18,
+    );
+    canvas.drawPath(topArc, arcPaint);
+
+    // Bottom subtle downward arc
+    final Path bottomArc = Path();
+    bottomArc.moveTo(8, size.height * 0.82);
+    bottomArc.quadraticBezierTo(
+      size.width / 2,
+      size.height + 6,
+      size.width - 8,
+      size.height * 0.82,
+    );
+    canvas.drawPath(bottomArc, arcPaint);
+
+    // Decorative side dots
+    final Paint dotPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(8, size.height * 0.18), 2.0, dotPaint);
+    canvas.drawCircle(Offset(size.width - 8, size.height * 0.18), 2.0, dotPaint);
+    canvas.drawCircle(Offset(8, size.height * 0.82), 2.0, dotPaint);
+    canvas.drawCircle(Offset(size.width - 8, size.height * 0.82), 2.0, dotPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 

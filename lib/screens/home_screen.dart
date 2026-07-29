@@ -32,7 +32,10 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         break;
       case 1:
-        tabWidget = const HistoryTab(key: ValueKey('tab_history'));
+        tabWidget = HistoryTab(
+          key: const ValueKey('tab_history'),
+          onProfileTapped: () => setState(() => _currentIndex = 2),
+        );
         break;
       default:
         tabWidget = const AccountTab(key: ValueKey('tab_account'));
@@ -192,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 34),
+              SizedBox(height: MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom : 6.0),
             ],
           ),
         ),
