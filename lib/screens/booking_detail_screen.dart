@@ -193,64 +193,27 @@ class BookingDetailScreen extends StatelessWidget {
 
                             const SizedBox(height: 20),
 
-                            // ── Bottom Action Buttons ─────────────────────────
-                            Row(
-                              children: [
-                                // Share Booking
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 44,
-                                    child: OutlinedButton.icon(
-                                      onPressed: () => _shareBooking(title, dateStr, timeStr, totalAmount),
-                                      icon: const Icon(Icons.ios_share_rounded, size: 16),
-                                      label: const FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text('Share Booking'),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: _kOrange,
-                                        side: const BorderSide(color: _kOrange, width: 1.3),
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        textStyle: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
+                            // ── Bottom Action Button (Share Booking) ───────────
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _shareBooking(title, dateStr, timeStr, totalAmount),
+                                icon: const Icon(Icons.ios_share_rounded, size: 16),
+                                label: const Text('Share Booking Details'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _kOrange,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                // Download Invoice
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 44,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => _downloadInvoice(context, refId),
-                                      icon: const Icon(Icons.file_download_outlined, size: 18),
-                                      label: const FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text('Download Invoice'),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: _kOrange,
-                                        foregroundColor: Colors.white,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        textStyle: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ).animate().fade(delay: 240.ms, duration: 300.ms),
 
                             const SizedBox(height: 14),
@@ -700,9 +663,6 @@ class BookingDetailScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                // QR code representation
-                Icon(Icons.qr_code_2_rounded, color: textColor, size: 36),
               ],
             ),
           ),
@@ -856,17 +816,6 @@ class BookingDetailScreen extends StatelessWidget {
     SharePlus.instance.share(ShareParams(text: text));
   }
 
-  void _downloadInvoice(BuildContext context, String refId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloading invoice for $refId...'),
-        duration: const Duration(seconds: 2),
-        backgroundColor: _kOrange,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _callSupport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -874,51 +823,6 @@ class BookingDetailScreen extends StatelessWidget {
         duration: Duration(seconds: 2),
         backgroundColor: _kOrange,
         behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showMoreOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.share_outlined, color: _kOrange),
-              title: const Text('Share Booking Details'),
-              onTap: () {
-                Navigator.pop(context);
-                _shareBooking(
-                  booking['title']?.toString() ?? 'Ground',
-                  booking['date']?.toString() ?? '',
-                  booking['time']?.toString() ?? '',
-                  (booking['totalAmount'] as num?)?.toDouble() ?? 0,
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.file_download_outlined, color: _kOrange),
-              title: const Text('Download Receipt'),
-              onTap: () {
-                Navigator.pop(context);
-                _downloadInvoice(context, booking['referenceId']?.toString() ?? '');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.help_outline, color: _kOrange),
-              title: const Text('Need Help with this Booking'),
-              onTap: () {
-                Navigator.pop(context);
-                _callSupport(context);
-              },
-            ),
-          ],
-        ),
       ),
     );
   }

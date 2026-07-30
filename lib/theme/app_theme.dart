@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_typography.dart';
 
 /// Centralized app colors & theme configuration.
@@ -31,7 +30,7 @@ class AppTheme {
       scaffoldBackgroundColor: lightBg,
       cardColor: lightCard,
       primaryColor: primaryOrange,
-      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+      fontFamily: 'Inter',
       textTheme: AppTypography.textTheme.apply(
         bodyColor: lightText,
         displayColor: lightText,
@@ -50,10 +49,11 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: const Color(0xFFD32F2F),
-        contentTextStyle: GoogleFonts.plusJakartaSans(
+        contentTextStyle: const TextStyle(
           color: Colors.white,
           fontSize: 14,
           fontWeight: FontWeight.w600,
+          fontFamily: 'Inter',
         ),
         actionTextColor: Colors.white,
         behavior: SnackBarBehavior.floating,
@@ -72,7 +72,7 @@ class AppTheme {
       scaffoldBackgroundColor: darkBg,
       cardColor: darkCard,
       primaryColor: primaryOrange,
-      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+      fontFamily: 'Inter',
       textTheme: AppTypography.textTheme.apply(
         bodyColor: darkText,
         displayColor: darkText,
@@ -91,10 +91,11 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: const Color(0xFFD32F2F),
-        contentTextStyle: GoogleFonts.plusJakartaSans(
+        contentTextStyle: const TextStyle(
           color: Colors.white,
           fontSize: 14,
           fontWeight: FontWeight.w600,
+          fontFamily: 'Inter',
         ),
         actionTextColor: Colors.white,
         behavior: SnackBarBehavior.floating,

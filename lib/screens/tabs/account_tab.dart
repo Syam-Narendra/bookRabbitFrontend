@@ -1,8 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -382,13 +379,13 @@ class _AccountTabState extends State<AccountTab> {
     final watermarkColor = accentOrange.withValues(alpha: 0.10);
 
     return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 28),
+      padding: const EdgeInsets.only(top: 12, bottom: 16),
       child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 580),
           decoration: BoxDecoration(
             color: cardBg,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderCol, width: 1.2),
             boxShadow: isDark
                 ? []
@@ -401,34 +398,34 @@ class _AccountTabState extends State<AccountTab> {
                   ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
             child: Stack(
               children: [
                 // Background Line Art Icons Watermarks
                 Positioned(
-                  left: 14,
-                  top: 36,
-                  child: Icon(Icons.sports_cricket_outlined, size: 36, color: watermarkColor),
+                  left: 12,
+                  top: 18,
+                  child: Icon(Icons.sports_cricket_outlined, size: 24, color: watermarkColor),
                 ),
                 Positioned(
-                  left: 16,
-                  bottom: 46,
-                  child: Icon(Icons.sports_soccer_outlined, size: 36, color: watermarkColor),
+                  left: 14,
+                  bottom: 24,
+                  child: Icon(Icons.sports_soccer_outlined, size: 24, color: watermarkColor),
+                ),
+                Positioned(
+                  right: 12,
+                  top: 18,
+                  child: Icon(Icons.sports_tennis_outlined, size: 24, color: watermarkColor),
                 ),
                 Positioned(
                   right: 14,
-                  top: 36,
-                  child: Icon(Icons.sports_tennis_outlined, size: 36, color: watermarkColor),
-                ),
-                Positioned(
-                  right: 16,
-                  bottom: 46,
-                  child: Icon(Icons.sports_basketball_outlined, size: 36, color: watermarkColor),
+                  bottom: 24,
+                  child: Icon(Icons.sports_basketball_outlined, size: 24, color: watermarkColor),
                 ),
 
                 // Main Content Column
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -437,8 +434,8 @@ class _AccountTabState extends State<AccountTab> {
                         alignment: Alignment.center,
                         children: [
                           Container(
-                            width: 104,
-                            height: 104,
+                            width: 60,
+                            height: 60,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: accentOrange.withValues(alpha: 0.06),
@@ -446,44 +443,44 @@ class _AccountTabState extends State<AccountTab> {
                           ),
                           Image.asset(
                             'assets/images/footer_logo.png',
-                            width: 96,
-                            height: 96,
+                            width: 52,
+                            height: 52,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => Image.asset(
                               'assets/images/sports_bunnies.png',
-                              width: 80,
-                              height: 80,
+                              width: 44,
+                              height: 44,
                               fit: BoxFit.contain,
                             ),
                           ),
                           // Small sparkle accents
                           Positioned(
                             left: 0,
-                            top: 14,
-                            child: Text('✦', style: TextStyle(color: accentOrange.withValues(alpha: 0.6), fontSize: 10)),
+                            top: 6,
+                            child: Text('✦', style: TextStyle(color: accentOrange.withValues(alpha: 0.6), fontSize: 8)),
                           ),
                           Positioned(
                             right: 0,
-                            top: 24,
-                            child: Text('✦', style: TextStyle(color: accentOrange.withValues(alpha: 0.6), fontSize: 8)),
+                            top: 10,
+                            child: Text('✦', style: TextStyle(color: accentOrange.withValues(alpha: 0.6), fontSize: 7)),
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
 
                       // 2. Book Rabbit Brand Logo & Title
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.cruelty_free, size: 26, color: Color(0xFFFF5200)),
-                          const SizedBox(width: 8),
+                          const Icon(Icons.cruelty_free, size: 20, color: Color(0xFFFF5200)),
+                          const SizedBox(width: 6),
                           RichText(
                             text: TextSpan(
                               style: TextStyle(
-                                fontSize: 22,
+                                fontSize: 17,
                                 fontWeight: FontWeight.w800,
-                                fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+                                fontFamily: 'Inter',
                               ),
                               children: [
                                 TextSpan(
@@ -500,96 +497,75 @@ class _AccountTabState extends State<AccountTab> {
                         ],
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
 
                       // 3. "A RABBIT PRODUCT" Subtitle with Side Lines
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(width: 24, height: 1.2, color: accentOrange.withValues(alpha: 0.4)),
-                          const SizedBox(width: 8),
+                          Container(width: 18, height: 1.0, color: accentOrange.withValues(alpha: 0.4)),
+                          const SizedBox(width: 6),
                           const Text(
                             'A RABBIT PRODUCT',
                             style: TextStyle(
                               color: Color(0xFF666666),
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 2.0,
+                              letterSpacing: 1.5,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(width: 24, height: 1.2, color: accentOrange.withValues(alpha: 0.4)),
+                          const SizedBox(width: 6),
+                          Container(width: 18, height: 1.0, color: accentOrange.withValues(alpha: 0.4)),
                         ],
                       ),
 
-                      const SizedBox(height: 14),
 
-                      // 4. "Made with ❤️ for sports lovers" Row with Triple Dots
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _tripleDots(accentOrange),
-                          const SizedBox(width: 14),
-                          Text(
-                            'Made with ❤️ for sports lovers',
-                            style: TextStyle(
-                              color: context.subTextColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          _tripleDots(accentOrange),
-                        ],
-                      ),
-
-                      const SizedBox(height: 18),
-
+                  
                       // Hairline Separator Line
                       Divider(height: 1, thickness: 1, color: borderCol),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
 
                       // 5. Version Pill Badge at Bottom
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 5,
-                            height: 5,
+                            width: 4,
+                            height: 4,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: accentOrange.withValues(alpha: 0.7),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                             decoration: BoxDecoration(
                               color: accentOrange.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: accentOrange.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.shield_outlined, size: 14, color: accentOrange),
-                                const SizedBox(width: 6),
+                                const Icon(Icons.shield_outlined, size: 12, color: accentOrange),
+                                const SizedBox(width: 4),
                                 Text(
                                   'v1.0.0',
                                   style: TextStyle(
                                     color: context.textColor,
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Container(
-                            width: 5,
-                            height: 5,
+                            width: 4,
+                            height: 4,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: accentOrange.withValues(alpha: 0.7),

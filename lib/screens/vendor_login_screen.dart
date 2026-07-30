@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class VendorLoginScreen extends StatefulWidget {
@@ -52,38 +51,36 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                         ),
                       ),
                       Positioned(
-                        right: -20,
-                        bottom: 0,
-                        top: 0,
+                        right: -40,
+                        bottom: -40,
                         child: Image.asset(
                           'assets/images/vendor-login-rabbit.png',
+                          height: constraints.maxHeight * 0.75,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) => const SizedBox(),
                         ),
                       ),
-                      SafeArea(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 48, top: 48),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.arrow_back, color: context.textColor, size: 28),
-                                onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                              ),
-                              const SizedBox(height: 32),
-                              Text('Vendor', style: GoogleFonts.plusJakartaSans(fontSize: 52, fontWeight: FontWeight.w800, color: context.textColor, height: 1.1)),
-                              Text('Login', style: GoogleFonts.plusJakartaSans(fontSize: 52, fontWeight: FontWeight.w800, color: const Color(0xFFFF5200), height: 1.1)),
-                              const SizedBox(height: 20),
-                              SizedBox(
-                                width: 260,
-                                child: Text('Access your dashboard, manage bookings, track earnings and grow your business.',
-                                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: context.subTextColor, height: 1.5, fontWeight: FontWeight.w500)),
-                              ),
-                              const SizedBox(height: 16),
-                              Container(width: 32, height: 4, decoration: BoxDecoration(color: const Color(0xFFFF5200), borderRadius: BorderRadius.circular(2))),
-                            ],
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 40),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.arrow_back, color: context.textColor, size: 28),
+                              onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                            ),
+                            const SizedBox(height: 32),
+                            Text('Vendor', style: TextStyle(fontSize: 52, fontWeight: FontWeight.w800, color: context.textColor, height: 1.1)),
+                            const Text('Login', style: TextStyle(fontSize: 52, fontWeight: FontWeight.w800, color: Color(0xFFFF5200), height: 1.1)),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: 260,
+                              child: Text('Access your dashboard, manage bookings, track earnings and grow your business.',
+                                  style: TextStyle(fontSize: 16, color: context.subTextColor, height: 1.5, fontWeight: FontWeight.w500)),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(width: 32, height: 4, decoration: BoxDecoration(color: const Color(0xFFFF5200), borderRadius: BorderRadius.circular(2))),
+                          ],
                         ),
                       ),
                     ],
@@ -145,13 +142,13 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Vendor', style: GoogleFonts.plusJakartaSans(fontSize: 42, fontWeight: FontWeight.w800, color: context.textColor, height: 1.1)),
-                              Text('Login', style: GoogleFonts.plusJakartaSans(fontSize: 42, fontWeight: FontWeight.w800, color: const Color(0xFFFF5200), height: 1.1)),
+                              Text('Vendor', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: context.textColor, height: 1.1)),
+                              const Text('Login', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: Color(0xFFFF5200), height: 1.1)),
                               const SizedBox(height: 20),
                               SizedBox(
                                 width: 220,
                                 child: Text('Access your dashboard,\nmanage bookings, track\nearnings and grow\nyour business.',
-                                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: context.subTextColor, height: 1.5, fontWeight: FontWeight.w500)),
+                                    style: TextStyle(fontSize: 14, color: context.subTextColor, height: 1.5, fontWeight: FontWeight.w500)),
                               ),
                               const SizedBox(height: 16),
                               Container(width: 32, height: 4, decoration: BoxDecoration(color: const Color(0xFFFF5200), borderRadius: BorderRadius.circular(2))),
@@ -208,7 +205,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
         if (showTitle) ...[
           RichText(
             text: TextSpan(
-              style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
               children: [
                 TextSpan(text: 'Welcome ', style: TextStyle(color: context.textColor)),
                 const TextSpan(text: 'back!', style: TextStyle(color: Color(0xFFFF7B42))),
@@ -217,7 +214,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
           ),
           const SizedBox(height: 8),
           Text('Log in to continue to your account',
-              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: context.subTextColor, fontWeight: FontWeight.w500)),
+              style: TextStyle(fontSize: 14, color: context.subTextColor, fontWeight: FontWeight.w500)),
           const SizedBox(height: 32),
         ],
         TextField(
@@ -260,7 +257,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
-            child: Text('Log In', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
         const SizedBox(height: 40),
@@ -271,7 +268,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
             const SizedBox(width: 8),
             Flexible(
               child: Text('Secure login for our trusted partners',
-                  style: GoogleFonts.plusJakartaSans(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.w500)),
+                  style: TextStyle(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.w500)),
             ),
           ],
         ),
@@ -280,4 +277,3 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
     );
   }
 }
-

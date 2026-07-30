@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'dart:math' show asin, cos, pi, sin, sqrt;
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
 import '../ground_details_screen.dart';
-import '../../services/auth_service.dart';
 import '../../services/ground_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -684,14 +682,14 @@ class _DiscoverTabState extends State<DiscoverTab> {
           child: LayoutBuilder(
                       builder: (context, constraints) {
                         final w = constraints.maxWidth;
-                        final cols = w >= 1100 ? 6
-                            : w >= 720 ? 5
-                            : w >= 540 ? 4
-                            : 3;
+                        final cols = w >= 1200 ? 5
+                            : w >= 900 ? 4
+                            : w >= 600 ? 3
+                            : 2;
 
                         final spacing = w >= 720 ? 12.0 : 10.0;
 
-                        final aspectRatio = 0.72; // Compact proportions for smaller card height and width
+                        final aspectRatio = w >= 600 ? 0.95 : 0.88; // Rectangular proportions for landscape card view
 
                         final bottomPad = w >= 720 ? 24.0 : 72.0;
 

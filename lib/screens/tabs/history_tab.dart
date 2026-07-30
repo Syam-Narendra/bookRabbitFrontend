@@ -9,13 +9,12 @@ import '../booking_detail_screen.dart';
 import '../../widgets/touchable_opacity.dart';
 
 // ─── Exact colours from the reference design ────────────────────────────────
-const _kOrange = Color(0xFFE5500A);       // status badge, icons, buttons
-const _kGreen  = Color(0xFF2AB04A);       // "Completed" status
-const _kGrey   = Color(0xFF8A8A8E);       // sub-text, labels
-const _kBorder = Color(0xFFE8E8E8);       // card border (light mode)
-const _kPanelBg = Color(0xFFFFF6F2);     // lightest orange tint for details box
-const _kPanelBorder = Color(0xFFFDE7DC); // subtle orange border for details box
-const _kPanelBgDark = Color(0xFF1C1C1E); // details panel bg (dark mode)
+const _kOrange     = Color(0xFFE5500A);   // status badge, icons, buttons
+const _kGreen      = Color(0xFF2AB04A);   // "Completed" status
+const _kGrey       = Color(0xFF8A8A8E);   // sub-text, labels
+const _kBorder     = Color(0xFFE8E8E8);   // card border (light mode)
+const _kPeachBg    = Color(0xFFFDF3EE);   // booking/fare detail box bg
+const _kPeachBorder = Color(0xFFF3E3D8);  // booking/fare detail box border
 // ────────────────────────────────────────────────────────────────────────────
 
 class HistoryTab extends StatefulWidget {
@@ -36,7 +35,7 @@ class _HistoryTabState extends State<HistoryTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _fetchBookings();
   }
 
@@ -59,7 +58,9 @@ class _HistoryTabState extends State<HistoryTab>
   List<Map<String, dynamic>> get _upcoming =>
       _bookings.where((b) => b['status'] == 'Upcoming').toList();
   List<Map<String, dynamic>> get _completed =>
-      _bookings.where((b) => b['status'] != 'Upcoming').toList();
+      _bookings.where((b) => b['status'] == 'Completed').toList();
+  List<Map<String, dynamic>> get _cancelled =>
+      _bookings.where((b) => b['status'] == 'Cancelled').toList();
 
   // ─── ROOT BUILD ────────────────────────────────────────────────────────────
   @override
@@ -102,8 +103,6 @@ class _HistoryTabState extends State<HistoryTab>
               const SizedBox(height: 14),
 
               // ── Tab bar ─────────────────────────────────────────────────────
-              // Matches image: full-width, evenly spread tabs, orange
-              // underline indicator sized to the label.
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: hPad),
                 child: TabBar(
@@ -129,11 +128,12 @@ class _HistoryTabState extends State<HistoryTab>
                   tabs: const [
                     Tab(text: 'Upcoming', height: 36),
                     Tab(text: 'Completed', height: 36),
+                    Tab(text: 'Cancelled', height: 36),
                   ],
                 ),
               ).animate().fade(delay: 60.ms, duration: 280.ms),
 
-              // Full-width hairline separator (matches image)
+              // Full-width hairline separator
               Divider(
                 height: 1, thickness: 1,
                 color: isDark ? const Color(0xFF3A3A3C) : _kBorder,
@@ -152,6 +152,8 @@ class _HistoryTabState extends State<HistoryTab>
                                   emptyMsg: 'No upcoming bookings'),
                               _buildList(_completed, hPad,
                                   emptyMsg: 'No completed bookings'),
+                              _buildList(_cancelled, hPad,
+                                  emptyMsg: 'No cancelled bookings'),
                             ],
                           ),
               ),
@@ -178,9 +180,9 @@ class _HistoryTabState extends State<HistoryTab>
       );
     }
     return ListView.separated(
-      padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 100),
+      padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 100),
       itemCount: list.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, i) => _card(list[i], i),
     );
   }
@@ -188,15 +190,25 @@ class _HistoryTabState extends State<HistoryTab>
   // ─── CARD ──────────────────────────────────────────────────────────────────
   Widget _card(Map<String, dynamic> b, int index) {
     final isDark = context.isDark;
-    final isUpcoming = b['status'] == 'Upcoming';
+    final isUpcoming  = b['status'] == 'Upcoming';
+    final isCancelled = b['status'] == 'Cancelled';
 
-    // Status colours — match reference exactly
-    final statusTxt   = isUpcoming ? _kOrange   : _kGreen;
-    final statusBg    = isUpcoming
-        ? const Color(0xFFFFF0E8)   // light orange tint
-        : const Color(0xFFE8F8EE);  // light green tint
+    final statusTxt = isUpcoming
+        ? _kOrange
+        : isCancelled
+            ? const Color(0xFFDC2626)
+            : _kGreen;
+    final statusBg  = isUpcoming
+        ? const Color(0xFFFFF0E8)
+        : isCancelled
+            ? const Color(0xFFFEF2F2)
+            : const Color(0xFFE8F8EE);
+    final statusLabel = isUpcoming
+        ? 'Upcoming'
+        : isCancelled
+            ? 'Cancelled'
+            : 'Completed';
 
-    // Fare fields
     final fare        = (b['fare']        as num?)?.toDouble() ?? 0;
     final platformFee = (b['platformFee'] as num?)?.toDouble() ?? 0;
     final total       = (b['totalAmount'] as num?)?.toDouble() ?? 0;
@@ -211,13 +223,11 @@ class _HistoryTabState extends State<HistoryTab>
         ? '${durH.toInt()} hrs'
         : '${durH.toStringAsFixed(1)} hrs';
 
-    // "Booked on" — use date field as fallback
     final bookedOn = (b['bookedOn'] as String?) ?? (b['date'] as String?) ?? '';
 
-    // Border colour
-    final borderCol   = isDark ? const Color(0xFF3A3A3C) : _kBorder;
-    final panelBg     = isDark ? _kPanelBgDark : _kPanelBg;
-    final panelBorder = isDark ? const Color(0xFF3A3A3C) : _kPanelBorder;
+    final borderCol    = isDark ? const Color(0xFF3A3A3C) : const Color(0xFFEFEFEF);
+    final boxBgColor   = isDark ? const Color(0xFF2A2422) : _kPeachBg;
+    final boxBorderCol = isDark ? const Color(0xFF3A322E) : _kPeachBorder;
 
     return TouchableOpacity(
       onTap: () => Navigator.push(context,
@@ -225,175 +235,200 @@ class _HistoryTabState extends State<HistoryTab>
       child: Container(
         decoration: BoxDecoration(
           color: context.cardBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: borderCol),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: borderCol, width: 1.0),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // ── TOP: image + meta + status badge ─────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Ground thumbnail
-              ClipRRect(
-                borderRadius: BorderRadius.circular(7),
-                child: _groundImage(b, size: 74),
-              ),
-              const SizedBox(width: 10),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── TOP ROW: Image + Title/Meta/Status ─────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: _groundImage(b, size: 110),
+                ),
+                const SizedBox(width: 14),
 
-              // Text column
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name row + status badge (right-aligned)
-                    Row(
+                Expanded(
+                  child: SizedBox(
+                    height: 110,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            (b['title'] as String?) ?? '',
-                            style: TextStyle(
-                              color: context.textColor,
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                (b['title'] as String?) ?? '',
+                                style: TextStyle(
+                                  color: context.textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusBg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: TextStyle(
+                                  color: statusTxt,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        // Status pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2.5),
-                          decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(5),
+
+                        const SizedBox(height: 8),
+
+                        if (location.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_rounded,
+                                  color: _kOrange, size: 15),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  location,
+                                  style: TextStyle(
+                                    color: context.isDark ? const Color(0xFF98989E) : const Color(0xFF6E6E73),
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            isUpcoming ? 'Upcoming' : 'Completed',
-                            style: TextStyle(
-                              color: statusTxt,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
+                          const SizedBox(height: 6),
+                        ],
+
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_month_outlined,
+                                color: _kOrange, size: 15),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                'Booked on $bookedOn',
+                                style: TextStyle(
+                                  color: context.isDark ? const Color(0xFF98989E) : const Color(0xFF6E6E73),
+                                  fontSize: 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 4),
-
-                    // Location row
-                    if (location.isNotEmpty) ...[
-                      Row(children: [
-                        const Icon(Icons.location_on_rounded,
-                            color: _kOrange, size: 12),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            location,
-                            style: const TextStyle(
-                                color: _kGrey, fontSize: 11.5),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ]),
-                      const SizedBox(height: 2),
-                    ],
-
-                    // Booked-on row
-                    Row(children: [
-                      const Icon(Icons.calendar_month_outlined,
-                          color: _kOrange, size: 12),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          'Booked on $bookedOn',
-                          style: const TextStyle(
-                              color: _kGrey, fontSize: 11.5),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ]),
-                  ],
+                  ),
                 ),
-              ),
-            ]),
-          ),
-
-          // ── DETAIL PANEL ──────────────────────────────────────────────────
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: panelBg,
-              borderRadius: BorderRadius.circular(7),
-              border: Border.all(color: panelBorder),
+              ],
             ),
-            child: IntrinsicHeight(
+
+            const SizedBox(height: 14),
+
+            // ── DETAILS ROW: TWO SEPARATE BOXES (EQUAL HEIGHT) ─────────────────
+            IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Left: Booking Details
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: boxBgColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: boxBorderCol),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _panelLabel('BOOKING DETAILS'),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 9),
                           _iconRow(Icons.calendar_today_rounded,
                               (b['date'] as String?) ?? ''),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           _iconRow(Icons.access_time_rounded,
                               (b['time'] as String?) ?? ''),
-                          const SizedBox(height: 4),
-                          _iconRow(Icons.timelapse_rounded, durLabel),
+                          const SizedBox(height: 6),
+                          _iconRow(Icons.timer_outlined, durLabel),
                           if (refId.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            _iconRow(Icons.qr_code_2_rounded, refId),
+                            const SizedBox(height: 6),
+                            _iconRow(Icons.confirmation_num_outlined, refId),
                           ],
                         ],
                       ),
                     ),
                   ),
 
-                  // Vertical divider
-                  VerticalDivider(
-                      width: 1, thickness: 1, color: panelBorder),
+                  const SizedBox(width: 10),
 
-                  // Right: Fare Details
-                  SizedBox(
-                    width: 135,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: boxBgColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: boxBorderCol),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _panelLabel('FARE DETAILS'),
-                          const SizedBox(height: 6),
-                          _fareRow('Ground Fare',
-                              '₹${fare.round()}'),
-                          const SizedBox(height: 3),
-                          _fareRow('Platform Fee',
-                              '₹${platformFee.round()}'),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Divider(
-                                height: 1, thickness: 1, color: panelBorder),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _panelLabel('FARE DETAILS'),
+                              const SizedBox(height: 9),
+                              _fareRow('Ground Fare', '₹${fare.round()}'),
+                              const SizedBox(height: 6),
+                              _fareRow('Platform Fee', '₹${platformFee.round()}'),
+                            ],
                           ),
-                          _fareRow(
-                            'Total Amount',
-                            '₹${total.round()}',
-                            labelBold: true,
-                            valueBold: true,
-                            valueColor: _kOrange,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Divider(
+                                    height: 1, thickness: 0.8, color: boxBorderCol),
+                              ),
+                              _fareRow(
+                                'Total Amount',
+                                '₹${total.round()}',
+                                labelBold: true,
+                                valueBold: true,
+                                valueColor: _kOrange,
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -402,82 +437,80 @@ class _HistoryTabState extends State<HistoryTab>
                 ],
               ),
             ),
-          ),
 
-          // ── ACTION BUTTONS ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Row(children: [
-              // Share — outlined, orange border
-              Expanded(
-                child: SizedBox(
-                  height: 36,
-                  child: OutlinedButton(
-                    onPressed: () => _share(b),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _kOrange,
-                      side: const BorderSide(color: _kOrange, width: 1.2),
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      textStyle: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w600),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
+            const SizedBox(height: 14),
+
+            // ── ACTION BUTTONS ROW ───────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 42,
+                    child: OutlinedButton(
+                      onPressed: () => _share(b),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? const Color(0xFF2C2C2E)
+                            : const Color(0xFFFFF6F3),
+                        foregroundColor: _kOrange,
+                        side: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF444446)
+                                : const Color(0xFFFFE0D4)),
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        textStyle: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: const [
-                          Icon(Icons.ios_share_rounded, size: 14),
-                          SizedBox(width: 5),
+                          Icon(Icons.ios_share_rounded, size: 16),
+                          SizedBox(width: 7),
                           Text('Share'),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(width: 8),
+                const SizedBox(width: 10),
 
-              // View Details — solid orange
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: 36,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => BookingDetailScreen(booking: b)),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _kOrange,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      textStyle: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w600),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
+                Expanded(
+                  child: SizedBox(
+                    height: 42,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => BookingDetailScreen(booking: b)),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kOrange,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        textStyle: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: const [
                           Text('View Details'),
-                          SizedBox(width: 2),
-                          Icon(Icons.chevron_right_rounded, size: 17),
+                          SizedBox(width: 4),
+                          Icon(Icons.chevron_right_rounded, size: 19),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ),
-            ]),
-          ),
-        ]),
+              ],
+            ),
+          ],
+        ),
       ),
     ).animate().fade(
       duration: 280.ms,
@@ -500,8 +533,8 @@ class _HistoryTabState extends State<HistoryTab>
             shape: BoxShape.circle,
             color: _kOrange.withValues(alpha: 0.1),
           ),
-          child: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: _kOrange, size: 16),
+          child: const Icon(Icons.chevron_left_rounded,
+              color: _kOrange, size: 24),
         ),
       );
 
@@ -518,21 +551,40 @@ class _HistoryTabState extends State<HistoryTab>
           widget.onProfileTapped!();
         }
       },
-      child: CircleAvatar(
-        radius: 19,
-        backgroundColor: _kOrange.withValues(alpha: 0.12),
-        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
-            ? NetworkImage(photoUrl)
-            : null,
-        child: (photoUrl == null || photoUrl.isEmpty)
-            ? Text(
-                initials.isNotEmpty ? initials : '?',
-                style: const TextStyle(
-                    color: _kOrange,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700),
-              )
-            : null,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          CircleAvatar(
+            radius: 19,
+            backgroundColor: _kOrange.withValues(alpha: 0.12),
+            backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                ? NetworkImage(photoUrl)
+                : null,
+            child: (photoUrl == null || photoUrl.isEmpty)
+                ? Text(
+                    initials.isNotEmpty ? initials : '?',
+                    style: const TextStyle(
+                        color: _kOrange,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700),
+                  )
+                : null,
+          ),
+          // Notification / online indicator dot
+          Positioned(
+            top: -1,
+            right: -1,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _kOrange,
+                shape: BoxShape.circle,
+                border: Border.all(color: context.cardBg, width: 2),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -541,11 +593,11 @@ class _HistoryTabState extends State<HistoryTab>
 
   Widget _panelLabel(String text) => Text(
         text,
-        style: const TextStyle(
-          color: _kGrey,
-          fontSize: 10,
+        style: TextStyle(
+          color: context.isDark ? const Color(0xFF98989E) : const Color(0xFF6E6E73),
+          fontSize: 10.5,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
+          letterSpacing: 0.5,
         ),
       );
 
@@ -553,7 +605,7 @@ class _HistoryTabState extends State<HistoryTab>
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(icon, color: _kOrange, size: 14),
-          const SizedBox(width: 6),
+          const SizedBox(width: 7),
           Expanded(
             child: Text(
               text,
@@ -583,9 +635,9 @@ class _HistoryTabState extends State<HistoryTab>
             child: Text(
               label,
               style: TextStyle(
-                color: labelBold ? context.textColor : _kGrey,
-                fontSize: 11.5,
-                fontWeight: labelBold ? FontWeight.bold : FontWeight.w400,
+                color: labelBold ? context.textColor : (context.isDark ? const Color(0xFF98989E) : const Color(0xFF6E6E73)),
+                fontSize: 12,
+                fontWeight: labelBold ? FontWeight.w700 : FontWeight.w400,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -596,8 +648,8 @@ class _HistoryTabState extends State<HistoryTab>
             value,
             style: TextStyle(
               color: valueColor ?? context.textColor,
-              fontSize: 11.5,
-              fontWeight: valueBold ? FontWeight.bold : FontWeight.w400,
+              fontSize: 12,
+              fontWeight: valueBold ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ],
@@ -614,7 +666,7 @@ class _HistoryTabState extends State<HistoryTab>
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 80),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(height: 14),
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, _) => Shimmer.fromColors(
         baseColor: context.isDark
             ? const Color(0xFF2C2C2E)
@@ -623,12 +675,12 @@ class _HistoryTabState extends State<HistoryTab>
             ? const Color(0xFF3A3A3C)
             : const Color(0xFFE5E5EA),
         child: Container(
-          height: 260,
+          height: 300,
           decoration: BoxDecoration(
             color: context.isDark
                 ? const Color(0xFF2C2C2E)
                 : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(color: _kBorder),
           ),
         ),
@@ -664,7 +716,7 @@ class _HistoryTabState extends State<HistoryTab>
     return 'assets/images/sports_bunnies.png';
   }
 
-  Widget _groundImage(Map<String, dynamic> b, {double size = 92}) {
+  Widget _groundImage(Map<String, dynamic> b, {double size = 110}) {
     final url      = (b['imageUrl'] as String?) ?? '';
     final fallback = _fallback((b['type'] as String?) ?? '');
 

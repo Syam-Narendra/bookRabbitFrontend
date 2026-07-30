@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../services/ground_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -664,7 +663,22 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, size: 13, color: Color(0xFFD97706)),
+            const SizedBox(width: 4),
+            Text(
+              'Bookings are open for next 15 days only',
+              style: TextStyle(
+                color: context.isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
         SizedBox(
           height: 80,
           child: ListView.builder(
@@ -777,10 +791,10 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 2.3,
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.9,
                 ),
                 itemCount: _timeSlots.length,
                 itemBuilder: (context, index) {
@@ -810,16 +824,16 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 2.3,
+          crossAxisCount: 4,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 1.9,
         ),
-        itemCount: 9,
+        itemCount: 12,
         itemBuilder: (_, __) => Container(
           decoration: BoxDecoration(
             color: context.subCardBg,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
@@ -830,27 +844,40 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     Color bgColor;
     Color textColor;
     Color borderColor;
+    double opacity = 1.0;
+
+    String? statusText;
 
     if (isSelected) {
-      bgColor = const Color(0xFFFF5200);
-      textColor = Colors.white;
-      borderColor = const Color(0xFFFF5200);
+      bgColor = const Color(0xFFE54F3F);
+      textColor = const Color(0xFFFFFFFF);
+      borderColor = const Color(0xFFE54F3F);
+      opacity = 1.0;
+      statusText = null;
     } else if (isPast) {
-      bgColor = context.isDark ? const Color(0xFF18181B) : const Color(0xFFEFEFF4);
-      textColor = context.subTextColor;
-      borderColor = context.borderColor;
+      bgColor = const Color(0xFFFFF7ED);
+      textColor = const Color(0xFFFB923C);
+      borderColor = const Color(0xFFFED7AA);
+      opacity = 1.0;
+      statusText = 'Past';
     } else if (isBooked) {
-      bgColor = context.isDark ? const Color(0xFF2D1E22) : const Color(0xFFFFEBEE);
-      textColor = const Color(0xFFE57373);
-      borderColor = const Color(0xFF4A252C);
+      bgColor = const Color(0xFFFEF2F2);
+      textColor = const Color(0xFFF87171);
+      borderColor = const Color(0xFFFECACA);
+      opacity = 1.0;
+      statusText = 'Booked';
     } else if (isHeld) {
-      bgColor = context.isDark ? const Color(0xFF221A0F) : const Color(0xFFFFF8E1);
-      textColor = const Color(0xFFF59E0B);
-      borderColor = const Color(0xFF453015);
+      bgColor = const Color(0xFFFFFBEB);
+      textColor = const Color(0xFFD97706);
+      borderColor = const Color(0xFFFCD34D);
+      opacity = 1.0;
+      statusText = 'Held';
     } else {
-      bgColor = context.cardBg;
-      textColor = context.textColor;
-      borderColor = context.borderColor;
+      bgColor = const Color(0xFFFFFFFF);
+      textColor = const Color(0xFF0A0A0F);
+      borderColor = const Color(0xFFD8D4CA);
+      opacity = 1.0;
+      statusText = null;
     }
 
     final isDisabled = isPast || isBooked || isHeld;
@@ -862,22 +889,67 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                 const SnackBar(content: Text('This time slot is unavailable.')),
               );
             }
-          : () => _showDurationBottomSheet(timeStr),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1.0),
-        ),
-        child: Center(
-          child: Text(
-            timeStr,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            ),
+          : () {
+              setState(() {
+                _selectedStartTime = timeStr;
+              });
+              _showDurationBottomSheet(timeStr);
+            },
+      child: Opacity(
+        opacity: opacity,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1.0),
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: statusText != null ? 5 : 0),
+                  child: Text(
+                    timeStr,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              if (statusText != null)
+                Positioned(
+                  bottom: 6,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isHeld) ...[
+                        Icon(
+                          Icons.hourglass_top_rounded,
+                          size: 9.5,
+                          color: textColor.withValues(alpha: 0.9),
+                        ),
+                        const SizedBox(width: 2),
+                      ],
+                      Text(
+                        statusText,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.9),
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          height: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -886,32 +958,40 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   Widget _buildSlotLegend() {
     final legends = [
-      (context.cardBg, context.textColor, context.borderColor, 'Available'),
-      (const Color(0xFFFF5200), Colors.white, const Color(0xFFFF5200), 'Selected'),
-      (context.isDark ? const Color(0xFF2D1E22) : const Color(0xFFFFEBEE), const Color(0xFFE57373), const Color(0xFF4A252C), 'Booked'),
-      (context.isDark ? const Color(0xFF221A0F) : const Color(0xFFFFF8E1), const Color(0xFFF59E0B), const Color(0xFF453015), 'Held'),
-      (context.isDark ? const Color(0xFF18181B) : const Color(0xFFEFEFF4), context.subTextColor, context.borderColor, 'Past'),
+      (const Color(0xFFFFFFFF), const Color(0xFF0A0A0F), const Color(0xFFD8D4CA), 1.0, 'Available'),
+      (const Color(0xFFE54F3F), const Color(0xFFFFFFFF), const Color(0xFFE54F3F), 1.0, 'Selected'),
+      (const Color(0xFFFEF2F2), const Color(0xFFF87171), const Color(0xFFFECACA), 1.0, 'Booked'),
+      (const Color(0xFFFFFBEB), const Color(0xFFD97706), const Color(0xFFFCD34D), 1.0, 'Held'),
+      (const Color(0xFFFFF7ED), const Color(0xFFFB923C), const Color(0xFFFED7AA), 1.0, 'Past'),
     ];
 
     return Wrap(
       spacing: 16,
       runSpacing: 8,
       children: legends.map((l) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: l.$1,
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: l.$3),
+        final isHeldLegend = l.$5 == 'Held';
+        return Opacity(
+          opacity: l.$4,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: l.$1,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: l.$3),
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Text(l.$4, style: TextStyle(color: context.subTextColor, fontSize: 11)),
-          ],
+              const SizedBox(width: 6),
+              if (isHeldLegend) ...[
+                Icon(Icons.hourglass_top_rounded, size: 11, color: l.$2),
+                const SizedBox(width: 2),
+              ],
+              Text(l.$5, style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.w500)),
+            ],
+          ),
         );
       }).toList(),
     );

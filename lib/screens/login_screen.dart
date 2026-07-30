@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
@@ -19,9 +18,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController phoneController = TextEditingController();
   bool _isSubmitting = false;
 
-  final String cricketRabbitUrl = 'assets/images/cricket-rabbit.png';
-  final String footballRabbitUrl = 'assets/images/football-rabbit.png';
-  final String tennisRabbitUrl = 'assets/images/tennis-rabbit.png';
+  static const String cricketRabbitUrl = 'assets/images/cricket-rabbit.png';
+  static const String footballRabbitUrl = 'assets/images/football-rabbit.png';
+  static const String tennisRabbitUrl = 'assets/images/tennis-rabbit.png';
 
   @override
   void dispose() {
@@ -33,25 +32,27 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.bgColor,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF57C4C), Color(0xFFF2693F)],
-          ),
-        ),
-        child: SafeArea(
+      body: SafeArea(
+        child: Container(
+          color: context.bgColor,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 720;
               if (isWide) {
                 return Row(
                   children: [
-                    // Left — mascots
+                    // Left banner
                     Expanded(
                       flex: 5,
-                      child: Padding(
+                      child: Container(
+                        height: double.infinity,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFFF7A2F), Color(0xFFF2693F)],
+                          ),
+                        ),
                         padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -59,13 +60,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             const Icon(Icons.cruelty_free, color: Colors.white, size: 52)
                                 .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
                             const SizedBox(height: 16),
-                            Text('Book Rabbit',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 48, fontWeight: FontWeight.w800, color: Colors.white))
+                            const Text('Book Rabbit',
+                                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Colors.white))
                                 .animate().fade(delay: 100.ms).slideY(begin: 0.2),
                             const SizedBox(height: 12),
                             Text('Instantly book your favourite sports grounds.',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 18, color: Colors.white.withValues(alpha: 0.9), height: 1.5))
+                                style: TextStyle(fontSize: 18, color: Colors.white.withValues(alpha: 0.9), height: 1.5))
                                 .animate().fade(delay: 150.ms).slideY(begin: 0.1),
                             const SizedBox(height: 40),
                             Row(
@@ -96,12 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text('Welcome!', style: GoogleFonts.plusJakartaSans(fontSize: 32, color: context.textColor, fontWeight: FontWeight.bold))
+                                    Text('Welcome!', style: TextStyle(fontSize: 32, color: context.textColor, fontWeight: FontWeight.bold))
                                         .animate().fade(delay: 400.ms).slideY(begin: 0.1),
                                     const SizedBox(height: 10),
                                     Text('Book Rabbit lets you instantly book your favourite sports grounds.',
                                         textAlign: TextAlign.center,
-                                        style: GoogleFonts.plusJakartaSans(fontSize: 15, color: context.subTextColor, height: 1.5))
+                                        style: TextStyle(fontSize: 15, color: context.subTextColor, height: 1.5))
                                         .animate().fade(delay: 450.ms).slideY(begin: 0.1),
                                     const SizedBox(height: 30),
                                     _buildForm(context),
@@ -123,8 +124,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Icon(Icons.cruelty_free, color: Colors.white, size: 42)
                       .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
                   const SizedBox(height: 8),
-                  Text('Book Rabbit',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white))
+                  const Text('Book Rabbit',
+                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white))
                       .animate().fade(delay: 100.ms).slideY(begin: 0.2),
                   const SizedBox(height: 16),
                   Expanded(
@@ -150,12 +151,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Welcome!', style: GoogleFonts.plusJakartaSans(fontSize: 28, color: context.textColor, fontWeight: FontWeight.bold))
+                        Text('Welcome!', style: TextStyle(fontSize: 28, color: context.textColor, fontWeight: FontWeight.bold))
                             .animate().fade(delay: 400.ms).slideY(begin: 0.1),
                         const SizedBox(height: 8),
                         Text('Book Rabbit lets you instantly book your favourite sports grounds.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: context.subTextColor, height: 1.4))
+                            style: TextStyle(fontSize: 14, color: context.subTextColor, height: 1.4))
                             .animate().fade(delay: 450.ms).slideY(begin: 0.1),
                         const SizedBox(height: 24),
                         _buildForm(context),
@@ -256,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
             alignment: Alignment.center,
             child: _isSubmitting
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : Text('LOGIN', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
+                : const Text('LOGIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
           ),
         ).animate().fade(delay: 550.ms).slideY(begin: 0.1),
         const SizedBox(height: 12),
@@ -264,16 +265,15 @@ class _LoginScreenState extends State<LoginScreen> {
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () => Navigator.pushReplacementNamed(context, '/vendor_login'),
-            child: Text('Vendor Login',
-                style: GoogleFonts.plusJakartaSans(
-                    color: const Color(0xFFF2693F),
+            child: const Text('Vendor Login',
+                style: TextStyle(
+                    color: Color(0xFFF2693F),
                     fontWeight: FontWeight.w600,
                     decoration: TextDecoration.underline,
-                    decorationColor: const Color(0xFFF2693F))),
+                    decorationColor: Color(0xFFF2693F))),
           ),
         ),
       ],
     );
   }
 }
-
