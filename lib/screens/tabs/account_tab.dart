@@ -280,8 +280,10 @@ class _AccountTabState extends State<AccountTab> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return SafeArea(
+      bottom: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 720;
         final bottomPad = isWide ? 40.0 : 72.0;
 
@@ -368,8 +370,9 @@ class _AccountTabState extends State<AccountTab> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildBrandFooter() {
     final isDark = context.isDark;
@@ -446,7 +449,7 @@ class _AccountTabState extends State<AccountTab> {
                             width: 52,
                             height: 52,
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Image.asset(
+                            errorBuilder: (_, _, _) => Image.asset(
                               'assets/images/sports_bunnies.png',
                               width: 44,
                               height: 44,
@@ -581,19 +584,6 @@ class _AccountTabState extends State<AccountTab> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _tripleDots(Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 4, height: 4, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.3))),
-        const SizedBox(width: 4),
-        Container(width: 5, height: 5, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
-        const SizedBox(width: 4),
-        Container(width: 4, height: 4, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.3))),
-      ],
     );
   }
 
@@ -861,7 +851,7 @@ class _AccountTabState extends State<AccountTab> {
           ),
           Switch.adaptive(
             value: isDark,
-            activeColor: const Color(0xFFFF4B3A),
+            activeThumbColor: const Color(0xFFFF4B3A),
             onChanged: (value) {
               ThemeService.toggleTheme(value);
             },
@@ -934,9 +924,9 @@ class _AccountTabState extends State<AccountTab> {
             height: 48,
             child: ElevatedButton.icon(
               onPressed: () {
-                Share.share(
-                  'Challenge me to a game on Book Rabbit! 🐰\nJoin using my link: ${AppConstants.inviteLink}',
-                );
+                SharePlus.instance.share(ShareParams(
+                  text: 'Challenge me to a game on Book Rabbit! 🐰\nJoin using my link: ${AppConstants.inviteLink}',
+                ));
               },
               icon: const Icon(Icons.share, color: Colors.white, size: 18),
               label: const Text(
@@ -958,9 +948,9 @@ class _AccountTabState extends State<AccountTab> {
   Widget _buildInviteBanner() {
     return InkWell(
       onTap: () {
-        Share.share(
-          'Challenge me to a game on Book Rabbit! 🐰\nJoin using my link: ${AppConstants.inviteLink}',
-        );
+        SharePlus.instance.share(ShareParams(
+          text: 'Challenge me to a game on Book Rabbit! 🐰\nJoin using my link: ${AppConstants.inviteLink}',
+        ));
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(

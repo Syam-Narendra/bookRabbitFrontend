@@ -252,12 +252,23 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     );
   }
 
+  String _formatDurationHrs(int mins) {
+    final hrs = mins / 60.0;
+    if (hrs == hrs.roundToDouble()) {
+      final whole = hrs.round();
+      return '$whole ${whole == 1 ? 'hr' : 'hrs'}';
+    }
+    final formatted = hrs.toStringAsFixed(1);
+    return '$formatted hrs';
+  }
+
   void _showDurationBottomSheet(String slot) {
     int maxAllowedMins = _calculateMaxAvailableDuration(slot);
     if (maxAllowedMins > 11 * 60) {
       maxAllowedMins = 11 * 60;
     }
-    
+    final maxAllowedHrs = maxAllowedMins / 60.0;
+
     int localDuration = 60;
     if (localDuration > maxAllowedMins) {
       localDuration = maxAllowedMins;
@@ -268,131 +279,232 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       backgroundColor: context.cardBg,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final accent = AppTheme.primaryOrangeAccent;
+            final tint = accent.withValues(alpha: context.isDark ? 0.16 : 0.08);
+            final fare = ((_basePrice / 60) * localDuration).round();
+            int platformFee = (fare * 0.03).round();
+            if (platformFee < 10 && fare > 0) platformFee = 10;
+            final total = fare + platformFee;
+            final endTime = _calculateEndTime(slot, localDuration);
+            final canDecrease = localDuration > 30;
+            final canIncrease = (localDuration + 30) <= maxAllowedMins;
+
+            Widget stepperButton({required IconData icon, required bool enabled, required VoidCallback onTap}) {
+              return InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: enabled ? onTap : null,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: enabled ? tint : context.subCardBg,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, color: enabled ? accent : context.subTextColor.withValues(alpha: 0.5), size: 26),
+                ),
+              );
+            }
+
+            Widget statChip({required IconData icon, required String label, required String value, Color? valueColor}) {
+              return Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: context.cardBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: context.borderColor),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(label, style: TextStyle(color: context.subTextColor, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: accent, width: 1.4),
+                        ),
+                        child: Icon(icon, color: accent, size: 15),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        value,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: valueColor ?? context.textColor, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'How long do you want to play?',
-                        style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: context.subTextColor),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Selected start time: $slot on ${DateFormat('EEE, d MMM').format(_selectedDate!)}',
-                    style: TextStyle(color: context.subTextColor, fontSize: 14),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: localDuration <= 30
-                            ? null
-                            : () {
-                                setModalState(() {
-                                  localDuration -= 30;
-                                });
-                              },
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: localDuration <= 30 ? context.borderColor : const Color(0xFFE54F3F)),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
+                            child: Icon(Icons.chevron_left, color: accent, size: 24),
                           ),
-                          child: Icon(Icons.remove, color: localDuration <= 30 ? Colors.grey : const Color(0xFFE54F3F), size: 28),
                         ),
-                      ),
-                      const SizedBox(width: 24),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF5200).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE54F3F), width: 2),
-                        ),
-                        child: Text(
-                          _formatDuration(localDuration),
-                          style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 22, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      IconButton(
-                        onPressed: (localDuration + 30) > maxAllowedMins
-                            ? null
-                            : () {
-                                setModalState(() {
-                                  localDuration += 30;
-                                });
-                              },
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: (localDuration + 30) > maxAllowedMins ? context.borderColor : const Color(0xFFE54F3F)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'How long do you want to play?',
+                            style: TextStyle(color: context.textColor, fontSize: 19, fontWeight: FontWeight.bold),
                           ),
-                          child: Icon(Icons.add, color: (localDuration + 30) > maxAllowedMins ? Colors.grey : const Color(0xFFE54F3F), size: 28),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Center(
+                      child: Text(
+                        '${_formatDurationHrs(localDuration)} — ends at $endTime',
+                        style: TextStyle(color: accent, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: context.subCardBg,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
                         children: [
-                          Text('Calculated Price', style: TextStyle(color: context.subTextColor, fontSize: 13)),
+                          stepperButton(icon: Icons.remove, enabled: canDecrease, onTap: () => setModalState(() => localDuration -= 30)),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Text(
+                                  _formatDuration(localDuration),
+                                  style: TextStyle(color: context.textColor, fontSize: 26, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'until $endTime',
+                                  style: TextStyle(color: context.subTextColor, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                          stepperButton(icon: Icons.add, enabled: canIncrease, onTap: () => setModalState(() => localDuration += 30)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Tap +/- to adjust in 30-min steps • max ${_formatDurationHrs((maxAllowedHrs * 60).round())}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.subTextColor, fontSize: 12),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: tint,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: accent.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'TOTAL TO PAY',
+                                style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: canDecrease ? () => setModalState(() => localDuration = 30) : null,
+                                icon: Icon(Icons.close, size: 15, color: accent),
+                                label: Text('Clear', style: TextStyle(color: accent, fontWeight: FontWeight.w600, fontSize: 13)),
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: context.cardBg,
+                                  side: BorderSide(color: accent.withValues(alpha: 0.4)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 4),
                           Text(
-                            '₹${((_basePrice / 60) * localDuration).round()}',
-                            style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 24, fontWeight: FontWeight.bold),
+                            '₹$total',
+                            style: TextStyle(color: accent, fontSize: 34, fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '₹$fare fare + ₹$platformFee platform fee',
+                            style: TextStyle(color: context.subTextColor, fontSize: 12.5),
+                          ),
+                          const SizedBox(height: 16),
+                          IntrinsicHeight(
+                            child: Row(
+                              children: [
+                                statChip(icon: Icons.access_time, label: 'FROM', value: slot),
+                                const SizedBox(width: 8),
+                                statChip(icon: Icons.access_time, label: 'TO', value: endTime),
+                                const SizedBox(width: 8),
+                                statChip(icon: Icons.timer_outlined, label: 'DURATION', value: _formatDuration(localDuration), valueColor: accent),
+                                const SizedBox(width: 8),
+                                statChip(icon: Icons.currency_rupee, label: 'RATE', value: '₹$_basePrice/hr'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedStartTime = slot;
+                                _durationMins = localDuration;
+                              });
+                              Navigator.pop(context);
+                              _proceedToReview();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('Confirm Booking', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedStartTime = slot;
-                            _durationMins = localDuration;
-                          });
-                          Navigator.pop(context);
-                          _proceedToReview();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE54F3F),
-                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text(
-                          'Confirm & Proceed',
-                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                    
+                  ],
+                ),
               ),
             );
           },
@@ -559,7 +671,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             url as String,
             fit: BoxFit.cover,
             width: double.infinity,
-            errorBuilder: (_, __, ___) => Image.asset('assets/images/sports_bunnies.png', height: height, width: double.infinity, fit: BoxFit.cover),
+            errorBuilder: (_, _, _) => Image.asset('assets/images/sports_bunnies.png', height: height, width: double.infinity, fit: BoxFit.cover),
           );
         }).toList(),
       );
@@ -808,8 +920,6 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   return _buildSlotChip(slot, slot24, isSelected: isSelected, isPast: isPast, isBooked: isBooked, isHeld: isHeld);
                 },
               ),
-              const SizedBox(height: 16),
-              _buildSlotLegend(),
             ],
           ),
       ],
@@ -830,7 +940,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           childAspectRatio: 1.9,
         ),
         itemCount: 12,
-        itemBuilder: (_, __) => Container(
+        itemBuilder: (_, _) => Container(
           decoration: BoxDecoration(
             color: context.subCardBg,
             borderRadius: BorderRadius.circular(12),
@@ -956,46 +1066,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     );
   }
 
-  Widget _buildSlotLegend() {
-    final legends = [
-      (const Color(0xFFFFFFFF), const Color(0xFF0A0A0F), const Color(0xFFD8D4CA), 1.0, 'Available'),
-      (const Color(0xFFE54F3F), const Color(0xFFFFFFFF), const Color(0xFFE54F3F), 1.0, 'Selected'),
-      (const Color(0xFFFEF2F2), const Color(0xFFF87171), const Color(0xFFFECACA), 1.0, 'Booked'),
-      (const Color(0xFFFFFBEB), const Color(0xFFD97706), const Color(0xFFFCD34D), 1.0, 'Held'),
-      (const Color(0xFFFFF7ED), const Color(0xFFFB923C), const Color(0xFFFED7AA), 1.0, 'Past'),
-    ];
-
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      children: legends.map((l) {
-        final isHeldLegend = l.$5 == 'Held';
-        return Opacity(
-          opacity: l.$4,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: l.$1,
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(color: l.$3),
-                ),
-              ),
-              const SizedBox(width: 6),
-              if (isHeldLegend) ...[
-                Icon(Icons.hourglass_top_rounded, size: 11, color: l.$2),
-                const SizedBox(width: 2),
-              ],
-              Text(l.$5, style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.w500)),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
+ 
 
   Widget _buildStickyBottomBar() {
     return Container(

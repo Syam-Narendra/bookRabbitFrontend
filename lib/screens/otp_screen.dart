@@ -20,8 +20,12 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   void dispose() {
-    for (var c in _controllers) c.dispose();
-    for (var f in _focusNodes) f.dispose();
+    for (var c in _controllers) {
+      c.dispose();
+    }
+    for (var f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -150,7 +154,9 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     } on ApiException catch (e) {
       if (!mounted) return;
-      for (final c in _controllers) c.clear();
+      for (final c in _controllers) {
+        c.clear();
+      }
       _focusNodes[0].requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),

@@ -357,32 +357,38 @@ class BookingDetailScreen extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Bottom Dual Soft Orange Boxes ──────────────────────────────────
-          Row(
-            children: [
-              // Left: Booked On Box
-              Expanded(
-                child: _softMetaBox(
-                  context: context,
-                  isDark: isDark,
-                  icon: Icons.calendar_today_rounded,
-                  label: 'Booked on',
-                  value: bookedOn,
+          // ── Bottom Dual Soft Orange Boxes ──────────────────────────────────
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left: Booked On Box
+                Expanded(
+                  child: _softMetaBox(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.calendar_today_rounded,
+                    label: 'Booked on',
+                    value: bookedOn.contains(', ') ? bookedOn.replaceFirst(', ', ',\n') : bookedOn,
+                    maxLines: 2,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
 
-              // Right: Booking ID Box with Copy Action
-              Expanded(
-                child: _softMetaBox(
-                  context: context,
-                  isDark: isDark,
-                  icon: Icons.confirmation_number_outlined,
-                  label: 'Booking ID',
-                  value: refId,
-                  onCopy: () => _copyToClipboard(context, refId, 'Booking ID copied!'),
+                // Right: Booking ID Box with Copy Action
+                Expanded(
+                  child: _softMetaBox(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.confirmation_number_outlined,
+                    label: 'Booking ID',
+                    value: refId,
+                    onCopy: () => _copyToClipboard(context, refId, 'Booking ID copied!'),
+                    maxLines: 2,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -412,6 +418,7 @@ class BookingDetailScreen extends StatelessWidget {
     required IconData icon,
     required String label,
     required String value,
+    int maxLines = 2,
     VoidCallback? onCopy,
   }) {
     final boxBg = isDark ? const Color(0xFF2C2C2E) : _kSoftOrange;
@@ -425,25 +432,29 @@ class BookingDetailScreen extends StatelessWidget {
         border: Border.all(color: boxBorder),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(icon, color: _kOrange, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   label,
                   style: const TextStyle(color: _kGrey, fontSize: 10, fontWeight: FontWeight.w500),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
                     color: context.textColor,
-                    fontSize: 11.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
+                    height: 1.2,
                   ),
-                  maxLines: 1,
+                  maxLines: maxLines,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -785,7 +796,7 @@ class BookingDetailScreen extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(fallback, width: size, height: size, fit: BoxFit.cover),
+        errorBuilder: (_, _, _) => Image.asset(fallback, width: size, height: size, fit: BoxFit.cover),
       );
     }
     return Image.asset(fallback, width: size, height: size, fit: BoxFit.cover);

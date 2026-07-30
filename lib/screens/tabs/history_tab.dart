@@ -70,11 +70,13 @@ class _HistoryTabState extends State<HistoryTab>
       final isWide = constraints.maxWidth >= 720;
       final hPad = isWide ? 20.0 : 16.0;
 
-      return Align(
-        alignment: Alignment.topCenter,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 860),
-          child: Column(
+      return SafeArea(
+        bottom: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header: back button + "My Bookings" + avatar ───────────────
@@ -160,9 +162,10 @@ class _HistoryTabState extends State<HistoryTab>
             ],
           ),
         ),
-      );
-    });
-  }
+      ),
+    );
+  });
+}
 
   // ─── LIST ──────────────────────────────────────────────────────────────────
   Widget _buildList(List<Map<String, dynamic>> list, double hPad,
@@ -182,7 +185,7 @@ class _HistoryTabState extends State<HistoryTab>
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 100),
       itemCount: list.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, i) => _card(list[i], i),
     );
   }
@@ -338,9 +341,10 @@ class _HistoryTabState extends State<HistoryTab>
                                 'Booked on $bookedOn',
                                 style: TextStyle(
                                   color: context.isDark ? const Color(0xFF98989E) : const Color(0xFF6E6E73),
-                                  fontSize: 13,
+                                  fontSize: 12.5,
+                                  height: 1.25,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -374,15 +378,21 @@ class _HistoryTabState extends State<HistoryTab>
                           _panelLabel('BOOKING DETAILS'),
                           const SizedBox(height: 9),
                           _iconRow(Icons.calendar_today_rounded,
-                              (b['date'] as String?) ?? ''),
+                              (b['date'] as String?) ?? '', maxLines: 2),
                           const SizedBox(height: 6),
-                          _iconRow(Icons.access_time_rounded,
-                              (b['time'] as String?) ?? ''),
+                          _iconRow(
+                              Icons.access_time_rounded,
+                              ((b['time'] as String?) ?? '').contains(' – ')
+                                  ? ((b['time'] as String?) ?? '').replaceFirst(' – ', ' –\n')
+                                  : ((b['time'] as String?) ?? '').contains(' - ')
+                                      ? ((b['time'] as String?) ?? '').replaceFirst(' - ', ' -\n')
+                                      : ((b['time'] as String?) ?? ''),
+                              maxLines: 2),
                           const SizedBox(height: 6),
-                          _iconRow(Icons.timer_outlined, durLabel),
+                          _iconRow(Icons.timer_outlined, durLabel, maxLines: 1),
                           if (refId.isNotEmpty) ...[
                             const SizedBox(height: 6),
-                            _iconRow(Icons.confirmation_num_outlined, refId),
+                            _iconRow(Icons.confirmation_num_outlined, refId, maxLines: 2),
                           ],
                         ],
                       ),
@@ -601,20 +611,24 @@ class _HistoryTabState extends State<HistoryTab>
         ),
       );
 
-  Widget _iconRow(IconData icon, String text) => Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+  Widget _iconRow(IconData icon, String text, {int maxLines = 2}) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: _kOrange, size: 14),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, color: _kOrange, size: 14),
+          ),
           const SizedBox(width: 7),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
                 color: context.textColor,
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
+                height: 1.25,
               ),
-              maxLines: 1,
+              maxLines: maxLines,
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -666,7 +680,7 @@ class _HistoryTabState extends State<HistoryTab>
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 80),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, _) => Shimmer.fromColors(
         baseColor: context.isDark
             ? const Color(0xFF2C2C2E)
@@ -709,10 +723,13 @@ class _HistoryTabState extends State<HistoryTab>
   String _fallback(String type) {
     final t = type.toLowerCase();
     if (t.contains('cricket')) return 'assets/images/cricket-rabbit.png';
-    if (t.contains('football') || t.contains('soccer'))
+    if (t.contains('football') || t.contains('soccer')) {
       return 'assets/images/football-rabbit.png';
+    }
     if (t.contains('tennis') || t.contains('badminton') ||
-        t.contains('pickleball')) return 'assets/images/tennis-rabbit.png';
+        t.contains('pickleball')) {
+      return 'assets/images/tennis-rabbit.png';
+    }
     return 'assets/images/sports_bunnies.png';
   }
 
@@ -723,7 +740,7 @@ class _HistoryTabState extends State<HistoryTab>
     if (url.startsWith('assets/')) {
       return Image.asset(url,
           width: size, height: size, fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
+          errorBuilder: (_, _, _) =>
               Image.asset(fallback, width: size, height: size, fit: BoxFit.cover));
     }
 
@@ -746,7 +763,7 @@ class _HistoryTabState extends State<HistoryTab>
           ),
         );
       },
-      errorBuilder: (_, __, ___) =>
+      errorBuilder: (_, _, _) =>
           Image.asset(fallback, width: size, height: size, fit: BoxFit.cover),
     );
   }

@@ -119,17 +119,14 @@ class _HomeScreenState extends State<HomeScreen> {
             resizeToAvoidBottomInset: false,
             body: Container(
               color: bgColor,
-              child: SafeArea(
-                bottom: false,
-                child: Stack(
-                  children: [
-                    _buildTabContent(),
-                    Positioned(
-                      left: 0, right: 0, bottom: 0,
-                      child: _buildBottomOverlay(),
-                    ),
-                  ],
-                ),
+              child: Stack(
+                children: [
+                  _buildTabContent(),
+                  Positioned(
+                    left: 0, right: 0, bottom: 0,
+                    child: _buildBottomOverlay(),
+                  ),
+                ],
               ),
             ),
           );

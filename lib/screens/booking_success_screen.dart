@@ -525,7 +525,7 @@ class BookingSuccessScreen extends StatelessWidget {
                 'Time: $startTime – $endTime\n'
                 'Booking ID: ${referenceId ?? 'BRB-PENDING'}\n'
                 'Amount Paid: ₹$finalPrice';
-            Share.share(details, subject: 'My Booking Details');
+            SharePlus.instance.share(ShareParams(text: details, subject: 'My Booking Details'));
           },
           child: Container(
             width: double.infinity,

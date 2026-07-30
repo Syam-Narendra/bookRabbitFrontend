@@ -560,7 +560,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
                           shrinkWrap: true,
                           padding: EdgeInsets.zero,
                           itemCount: suggestions.length,
-                          separatorBuilder: (_, __) => Divider(
+                          separatorBuilder: (_, _) => Divider(
                               height: 1, color: context.borderColor),
                           itemBuilder: (_, i) {
                             final place = suggestions[i];
@@ -809,7 +809,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
     const mascotAsset = 'assets/images/rabbit_support_half.png';
     const fallbackMascot = 'assets/images/rabbit_support.png';
 
-    final headerHeight = isWide ? 145.0 : 135.0;
+    final topPadding = isWide ? 0.0 : MediaQuery.of(context).padding.top;
+    final headerHeight = (isWide ? 145.0 : 135.0) + topPadding;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -849,12 +850,12 @@ class _DiscoverTabState extends State<DiscoverTab> {
                       height: isWide ? 130 : 110,
                       fit: BoxFit.contain,
                       alignment: Alignment.topRight,
-                      errorBuilder: (_, __, ___) => Image.asset(
+                      errorBuilder: (_, _, _) => Image.asset(
                         fallbackMascot,
                         height: isWide ? 130 : 110,
                         fit: BoxFit.contain,
                         alignment: Alignment.topRight,
-                        errorBuilder: (_, __, ___) => Image.asset(
+                        errorBuilder: (_, _, _) => Image.asset(
                           'assets/images/sports_bunnies.png',
                           height: isWide ? 130 : 110,
                           fit: BoxFit.contain,
