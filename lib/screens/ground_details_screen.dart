@@ -279,7 +279,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       backgroundColor: context.cardBg,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (BuildContext context) {
         return StatefulBuilder(
@@ -310,7 +310,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               );
             }
 
-            Widget statChip({required IconData icon, required String label, required String value, Color? valueColor}) {
+            Widget statChip({required String label, required String value, Color? valueColor}) {
               return Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -322,21 +322,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   child: Column(
                     children: [
                       Text(label, style: TextStyle(color: context.subTextColor, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: accent, width: 1.4),
-                        ),
-                        child: Icon(icon, color: accent, size: 15),
-                      ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Text(
                         value,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: valueColor ?? context.textColor, fontSize: 13, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: valueColor ?? context.textColor, fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -356,28 +346,39 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 5,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: context.borderColor,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
                     Row(
                       children: [
-                        InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
-                            child: Icon(Icons.chevron_left, color: accent, size: 24),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'How long do you want to play?',
-                            style: TextStyle(color: context.textColor, fontSize: 19, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: context.textColor, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(color: context.subCardBg, shape: BoxShape.circle),
+                            child: Icon(Icons.close, color: context.subTextColor, size: 17),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Center(
                       child: Text(
                         '${_formatDurationHrs(localDuration)} — ends at $endTime',
@@ -389,7 +390,14 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: context.subCardBg,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: context.isDark ? Colors.black.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
@@ -464,13 +472,13 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                           IntrinsicHeight(
                             child: Row(
                               children: [
-                                statChip(icon: Icons.access_time, label: 'FROM', value: slot),
+                                statChip(label: 'FROM', value: slot),
                                 const SizedBox(width: 8),
-                                statChip(icon: Icons.access_time, label: 'TO', value: endTime),
+                                statChip(label: 'TO', value: endTime),
                                 const SizedBox(width: 8),
-                                statChip(icon: Icons.timer_outlined, label: 'DURATION', value: _formatDuration(localDuration), valueColor: accent),
+                                statChip(label: 'DURATION', value: _formatDuration(localDuration), valueColor: accent),
                                 const SizedBox(width: 8),
-                                statChip(icon: Icons.currency_rupee, label: 'RATE', value: '₹$_basePrice/hr'),
+                                statChip(label: 'RATE', value: '₹$_basePrice/hr'),
                               ],
                             ),
                           ),

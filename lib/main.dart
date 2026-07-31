@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/vendor_login_screen.dart';
+import 'screens/vendor_dashboard_screen.dart';
 import 'screens/setup_profile_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/booking_success_screen.dart';
 import 'screens/terms_conditions_screen.dart';
 import 'screens/support_screen.dart';
 import 'services/auth_service.dart';
+import 'services/vendor_auth_service.dart';
 import 'services/api_client.dart';
 import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
@@ -18,6 +20,7 @@ void main() async {
   await Future.wait([
     ThemeService.init(),
     ApiClient.loadToken(), // Fast local-storage read — NO network call
+    ApiClient.loadAdminCookie(),
   ]);
   runApp(const MyApp());
 }
@@ -49,6 +52,9 @@ class MyApp extends StatelessWidget {
                 ? const HomeScreen()
                 : const LoginScreen(),
             '/vendor_login': (context) => const VendorLoginScreen(),
+            '/vendor_dashboard': (context) => VendorAuthService.currentOwner != null
+                ? const VendorDashboardScreen()
+                : const VendorLoginScreen(),
             '/setup_profile': (context) => AuthService.currentUser != null
                 ? const SetupProfileScreen()
                 : const LoginScreen(),

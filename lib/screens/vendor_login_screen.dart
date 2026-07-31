@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/api_client.dart';
+import '../services/vendor_auth_service.dart';
 import '../theme/app_theme.dart';
+import 'vendor_otp_screen.dart';
 
 class VendorLoginScreen extends StatefulWidget {
   const VendorLoginScreen({super.key});
@@ -11,11 +14,37 @@ class VendorLoginScreen extends StatefulWidget {
 
 class _VendorLoginScreenState extends State<VendorLoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_phoneController.text.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please enter a valid 10-digit mobile number.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: Color(0xFFD32F2F),
+      ));
+      return;
+    }
+    final phone = _phoneController.text;
+    setState(() => _isSubmitting = true);
+    try {
+      await VendorAuthService.sendOtp(phone);
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => VendorOtpScreen(phone: phone)));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFFD32F2F),
+      ));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -251,13 +280,15 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: _isSubmitting ? null : _submit,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF7B42),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
-            child: const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            child: _isSubmitting
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                : const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
         const SizedBox(height: 40),

@@ -42,11 +42,70 @@ class ApiClient {
     await PlatformStorage.deleteToken();
   }
 
+  // --- Admin/vendor session (cookie-based, fully separate from the bearer
+  // token above — the backend's admin API issues a Set-Cookie session, not a
+  // bearer token). ---
+  static String? _adminCookie;
+
+  static Future<void> loadAdminCookie() async {
+    _adminCookie = await PlatformStorage.readAdminCookie();
+  }
+
+  static Future<void> setAdminCookie(String cookie) async {
+    _adminCookie = cookie;
+    await PlatformStorage.writeAdminCookie(cookie);
+  }
+
+  static Future<void> clearAdminCookie() async {
+    _adminCookie = null;
+    await PlatformStorage.deleteAdminCookie();
+  }
 
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
+
+  static Map<String, String> get _adminHeaders => {
+        'Content-Type': 'application/json',
+        if (_adminCookie != null) 'Cookie': _adminCookie!,
+      };
+
+  /// Captures the `name=value` part of a `Set-Cookie` response header (if
+  /// present) and persists it, so the next admin request re-sends it.
+  static Future<void> _captureAdminCookie(http.Response response) async {
+    final setCookie = response.headers['set-cookie'];
+    if (setCookie == null) return;
+    final cookiePair = setCookie.split(';').first.trim();
+    if (cookiePair.isNotEmpty) await setAdminCookie(cookiePair);
+  }
+
+  static Future<dynamic> adminGet(String path) async {
+    final response =
+        await http.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _adminHeaders);
+    await _captureAdminCookie(response);
+    return _decode(response);
+  }
+
+  static Future<dynamic> adminPost(String path, {Map<String, dynamic>? body}) async {
+    final response = await http.post(
+      Uri.parse('${AppConstants.apiBaseUrl}$path'),
+      headers: _adminHeaders,
+      body: body != null ? json.encode(body) : null,
+    );
+    await _captureAdminCookie(response);
+    return _decode(response);
+  }
+
+  static Future<dynamic> adminPatch(String path, {Map<String, dynamic>? body}) async {
+    final response = await http.patch(
+      Uri.parse('${AppConstants.apiBaseUrl}$path'),
+      headers: _adminHeaders,
+      body: body != null ? json.encode(body) : null,
+    );
+    await _captureAdminCookie(response);
+    return _decode(response);
+  }
 
   static Future<dynamic> get(String path) async {
     final response =
