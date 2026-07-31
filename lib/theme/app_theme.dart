@@ -5,8 +5,8 @@ import 'app_typography.dart';
 class AppTheme {
   AppTheme._();
 
-  static const Color primaryOrange = Color(0xFFFF4B3A);
-  static const Color primaryOrangeAccent = Color(0xFFE54F3F);
+  static const Color primaryOrange = Color(0xFFFF7A2F);
+  static const Color primaryOrangeAccent = Color(0xFFFF7A2F);
 
   // Light Theme Colors (White / Light Mode)
   static const Color lightBg = Color(0xFFF9F9FB);

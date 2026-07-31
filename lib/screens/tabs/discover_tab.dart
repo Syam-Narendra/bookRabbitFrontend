@@ -389,16 +389,18 @@ class _DiscoverTabState extends State<DiscoverTab> {
               final newLat = double.tryParse(place['lat']?.toString() ?? '');
               final newLng = double.tryParse(place['lon']?.toString() ?? '');
 
-              setState(() {
-                _locationArea = area;
-                _locationAddress = fullAddress.isNotEmpty ? fullAddress : 'Selected manually';
-                if (newLat != null && newLng != null) {
-                  _userLat = newLat;
-                  _userLng = newLng;
-                  allGrounds = _sortByDistance(allGrounds);
-                }
-              });
               closeSheet();
+              if (mounted) {
+                setState(() {
+                  _locationArea = area;
+                  _locationAddress = fullAddress.isNotEmpty ? fullAddress : 'Selected manually';
+                  if (newLat != null && newLng != null) {
+                    _userLat = newLat;
+                    _userLng = newLng;
+                    allGrounds = _sortByDistance(allGrounds);
+                  }
+                });
+              }
             }
 
             return Padding(
@@ -944,37 +946,29 @@ class _DiscoverTabState extends State<DiscoverTab> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    child: Text(
-                      _locationArea,
-                      key: ValueKey(_locationArea),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isWide ? 16 : 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    _locationArea,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isWide ? 16 : 18,
+                      fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(width: 4),
                   const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
                 ],
               ),
               const SizedBox(height: 2),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                child: Text(
-                  _locationAddress,
-                  key: ValueKey(_locationAddress),
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: isWide ? 11 : 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              Text(
+                _locationAddress,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: isWide ? 11 : 12,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -138,82 +138,95 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
             );
           }
 
-          // Narrow — stacked design
+          // Narrow — stacked design with centered top hero and bottom anchored login card
           return Stack(
             children: [
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 20,
-                right: -30,
-                child: Image.asset(
-                  'assets/images/vendor-login-rabbit.png',
-                  height: MediaQuery.of(context).size.height * 0.45,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const SizedBox(),
+              // Top peach gradient background behind text and illustration
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: heroGradientColors,
+                    ),
+                  ),
                 ),
               ),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SafeArea(
                     bottom: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-                          child: IconButton(
-                            icon: Icon(Icons.arrow_back, color: context.textColor, size: 28),
-                            onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                          ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10.0, top: 4.0),
+                        child: IconButton(
+                          icon: Icon(Icons.arrow_back, color: context.textColor, size: 26),
+                          onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 32.0, top: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Vendor', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: context.textColor, height: 1.1)),
-                              const Text('Login', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: Color(0xFFFF5200), height: 1.1)),
-                              const SizedBox(height: 20),
-                              SizedBox(
-                                width: 220,
-                                child: Text('Access your dashboard,\nmanage bookings, track\nearnings and grow\nyour business.',
-                                    style: TextStyle(fontSize: 14, color: context.subTextColor, height: 1.5, fontWeight: FontWeight.w500)),
-                              ),
-                              const SizedBox(height: 16),
-                              Container(width: 32, height: 4, decoration: BoxDecoration(color: const Color(0xFFFF5200), borderRadius: BorderRadius.circular(2))),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 40),
                   Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: context.cardBg,
-                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-                      ),
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                          child: Column(
-                            children: [
-                              Transform.translate(
-                                offset: const Offset(0, -30),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(color: const Color(0xFFFF5200).withValues(alpha: 0.12), shape: BoxShape.circle),
-                                  child: const Icon(Icons.storefront, color: Color(0xFFFF7B42), size: 36),
-                                ),
-                              ),
-                              Transform.translate(
-                                offset: const Offset(0, -10),
-                                child: _buildForm(context, showTitle: true),
-                              ),
-                            ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 4.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Image.asset(
+                              'assets/images/vendor-login-rabbit.png',
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                            ),
                           ),
+                          const SizedBox(height: 8),
+                          RichText(
+                            textAlign: TextAlign.center,
+                            text: TextSpan(
+                              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, height: 1.1),
+                              children: [
+                                TextSpan(text: 'Vendor ', style: TextStyle(color: context.textColor)),
+                                const TextSpan(text: 'Login', style: TextStyle(color: Color(0xFFFF5200))),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Access your dashboard, manage bookings, track earnings and grow your business.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12.5, color: context.subTextColor, height: 1.35, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(width: 36, height: 4, decoration: BoxDecoration(color: const Color(0xFFFF5200), borderRadius: BorderRadius.circular(2))),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: context.cardBg,
+                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 20.0, bottom: 16.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(color: const Color(0xFFFF5200).withValues(alpha: 0.12), shape: BoxShape.circle),
+                              child: const Icon(Icons.storefront, color: Color(0xFFFF7B42), size: 30),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildForm(context, showTitle: true),
+                          ],
                         ),
                       ),
                     ),
@@ -230,21 +243,30 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
   Widget _buildForm(BuildContext context, {bool showTitle = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (showTitle) ...[
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
-              children: [
-                TextSpan(text: 'Welcome ', style: TextStyle(color: context.textColor)),
-                const TextSpan(text: 'back!', style: TextStyle(color: Color(0xFFFF7B42))),
-              ],
+          // Center(
+          //   child: RichText(
+          //     textAlign: TextAlign.center,
+          //     text: TextSpan(
+          //       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          //       children: [
+          //         TextSpan(text: 'Welcome ', style: TextStyle(color: context.textColor)),
+          //         const TextSpan(text: 'back!', style: TextStyle(color: Color(0xFFFF7B42))),
+          //       ],
+          //     ),
+          //   ),
+          // ),
+          const SizedBox(height: 4),
+          Center(
+            child: Text(
+              'Log in to continue to your account',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: context.subTextColor, fontWeight: FontWeight.w500),
             ),
           ),
-          const SizedBox(height: 8),
-          Text('Log in to continue to your account',
-              style: TextStyle(fontSize: 14, color: context.subTextColor, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 32),
+          const SizedBox(height: 18),
         ],
         TextField(
           controller: _phoneController,
@@ -275,10 +297,10 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFF7B42))),
           ),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
-          height: 56,
+          height: 54,
           child: ElevatedButton(
             onPressed: _isSubmitting ? null : _submit,
             style: ElevatedButton.styleFrom(
@@ -291,19 +313,19 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                 : const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 20),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.verified_user, color: Color(0xFFFF7B42), size: 16),
-            const SizedBox(width: 8),
+            const Icon(Icons.verified_user, color: Color(0xFFFF7B42), size: 15),
+            const SizedBox(width: 6),
             Flexible(
               child: Text('Secure login for our trusted partners',
-                  style: TextStyle(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.w500)),
+                  style: TextStyle(color: context.subTextColor, fontSize: 12, fontWeight: FontWeight.w500)),
             ),
           ],
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 12),
       ],
     );
   }

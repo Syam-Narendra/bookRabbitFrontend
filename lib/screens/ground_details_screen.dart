@@ -220,10 +220,10 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     }
   }
 
-  void _proceedToReview() {
+  Future<void> _proceedToReview() async {
     if (_selectedStartTime == null || _selectedDate == null) return;
     if (AuthService.currentUser == null) {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
@@ -235,7 +235,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     if (platformFee < 10 && fare > 0) platformFee = 10;
     final finalPrice = fare + platformFee;
 
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ReviewBookingScreen(
@@ -250,6 +250,13 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         ),
       ),
     );
+
+    if (mounted) {
+      setState(() {
+        _selectedStartTime = null;
+      });
+      _fetchAvailability();
+    }
   }
 
   String _formatDurationHrs(int mins) {
@@ -264,9 +271,6 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   void _showDurationBottomSheet(String slot) {
     int maxAllowedMins = _calculateMaxAvailableDuration(slot);
-    if (maxAllowedMins > 11 * 60) {
-      maxAllowedMins = 11 * 60;
-    }
     final maxAllowedHrs = maxAllowedMins / 60.0;
 
     int localDuration = 60;
@@ -296,16 +300,16 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
             Widget stepperButton({required IconData icon, required bool enabled, required VoidCallback onTap}) {
               return InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 onTap: enabled ? onTap : null,
                 child: Container(
-                  width: 56,
-                  height: 56,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: enabled ? tint : context.subCardBg,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: enabled ? accent : context.subTextColor.withValues(alpha: 0.5), size: 26),
+                  child: Icon(icon, color: enabled ? accent : context.subTextColor.withValues(alpha: 0.5), size: 22),
                 ),
               );
             }
@@ -313,20 +317,20 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             Widget statChip({required String label, required String value, Color? valueColor}) {
               return Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                   decoration: BoxDecoration(
                     color: context.cardBg,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: context.borderColor),
                   ),
                   child: Column(
                     children: [
-                      Text(label, style: TextStyle(color: context.subTextColor, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-                      const SizedBox(height: 10),
+                      Text(label, style: TextStyle(color: context.subTextColor, fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                      const SizedBox(height: 3),
                       Text(
                         value,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: valueColor ?? context.textColor, fontSize: 14, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: valueColor ?? context.textColor, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -338,181 +342,171 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               padding: EdgeInsets.only(
                 left: 20,
                 right: 20,
-                top: 20,
+                top: 16,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 5,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: context.borderColor,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: context.borderColor,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    Row(
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'How long do you want to play?',
+                          style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(color: context.subCardBg, shape: BoxShape.circle),
+                          child: Icon(Icons.close, color: context.subTextColor, size: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Text(
+                      '${_formatDurationHrs(localDuration)} - ends at $endTime',
+                      style: TextStyle(color: accent, fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: context.subCardBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
                       children: [
+                        stepperButton(icon: Icons.remove, enabled: canDecrease, onTap: () => setModalState(() => localDuration -= 30)),
                         Expanded(
-                          child: Text(
-                            'How long do you want to play?',
-                            style: TextStyle(color: context.textColor, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                          child: Column(
+                            children: [
+                              Text(
+                                _formatDuration(localDuration),
+                                style: TextStyle(color: context.textColor, fontSize: 24, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'until $endTime',
+                                style: TextStyle(color: context.subTextColor, fontSize: 12),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(color: context.subCardBg, shape: BoxShape.circle),
-                            child: Icon(Icons.close, color: context.subTextColor, size: 17),
+                        stepperButton(icon: Icons.add, enabled: canIncrease, onTap: () => setModalState(() => localDuration += 30)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap +/- to adjust in 30-min steps • max ${_formatDurationHrs((maxAllowedHrs * 60).round())}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.subTextColor, fontSize: 11),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: tint,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: accent.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'TOTAL TO PAY',
+                              style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1),
+                            ),
+                            if (canDecrease)
+                              InkWell(
+                                onTap: () => setModalState(() => localDuration = 30),
+                                child: Text('Reset', style: TextStyle(color: accent, fontWeight: FontWeight.w600, fontSize: 12)),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '₹$total',
+                              style: TextStyle(color: accent, fontSize: 26, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '(₹$fare fare + ₹$platformFee platform fee)',
+                              style: TextStyle(color: context.subTextColor, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        IntrinsicHeight(
+                          child: Row(
+                            children: [
+                              statChip(label: 'FROM', value: slot),
+                              const SizedBox(width: 6),
+                              statChip(label: 'TO', value: endTime),
+                              const SizedBox(width: 6),
+                              statChip(label: 'DURATION', value: _formatDuration(localDuration), valueColor: accent),
+                              const SizedBox(width: 6),
+                              statChip(label: 'RATE', value: '₹$_basePrice/hr'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedStartTime = slot;
+                              _durationMins = localDuration;
+                            });
+                            Navigator.pop(context);
+                            _proceedToReview();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Confirm Booking', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        '${_formatDurationHrs(localDuration)} — ends at $endTime',
-                        style: TextStyle(color: accent, fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: context.subCardBg,
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.isDark ? Colors.black.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          stepperButton(icon: Icons.remove, enabled: canDecrease, onTap: () => setModalState(() => localDuration -= 30)),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Text(
-                                  _formatDuration(localDuration),
-                                  style: TextStyle(color: context.textColor, fontSize: 26, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'until $endTime',
-                                  style: TextStyle(color: context.subTextColor, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ),
-                          stepperButton(icon: Icons.add, enabled: canIncrease, onTap: () => setModalState(() => localDuration += 30)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Tap +/- to adjust in 30-min steps • max ${_formatDurationHrs((maxAllowedHrs * 60).round())}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: context.subTextColor, fontSize: 12),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: tint,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: accent.withValues(alpha: 0.3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'TOTAL TO PAY',
-                                style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: canDecrease ? () => setModalState(() => localDuration = 30) : null,
-                                icon: Icon(Icons.close, size: 15, color: accent),
-                                label: Text('Clear', style: TextStyle(color: accent, fontWeight: FontWeight.w600, fontSize: 13)),
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: context.cardBg,
-                                  side: BorderSide(color: accent.withValues(alpha: 0.4)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '₹$total',
-                            style: TextStyle(color: accent, fontSize: 34, fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '₹$fare fare + ₹$platformFee platform fee',
-                            style: TextStyle(color: context.subTextColor, fontSize: 12.5),
-                          ),
-                          const SizedBox(height: 16),
-                          IntrinsicHeight(
-                            child: Row(
-                              children: [
-                                statChip(label: 'FROM', value: slot),
-                                const SizedBox(width: 8),
-                                statChip(label: 'TO', value: endTime),
-                                const SizedBox(width: 8),
-                                statChip(label: 'DURATION', value: _formatDuration(localDuration), valueColor: accent),
-                                const SizedBox(width: 8),
-                                statChip(label: 'RATE', value: '₹$_basePrice/hr'),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedStartTime = slot;
-                                _durationMins = localDuration;
-                              });
-                              Navigator.pop(context);
-                              _proceedToReview();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accent,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              elevation: 0,
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('Confirm Booking', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                SizedBox(width: 8),
-                                Icon(Icons.arrow_forward, color: Colors.white, size: 18),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
@@ -706,7 +700,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           width: double.infinity,
           color: context.subCardBg,
           child: const Center(
-            child: CircularProgressIndicator(color: Color(0xFFE54F3F)),
+            child: CircularProgressIndicator(color: Color(0xFFFF7A2F)),
           ),
         );
       },
@@ -734,16 +728,16 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFE54F3F).withValues(alpha: 0.15),
+                color: const Color(0xFFFF7A2F).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.sports_soccer, color: Color(0xFFE54F3F), size: 14),
+                  const Icon(Icons.sports_soccer, color: Color(0xFFFF7A2F), size: 14),
                   const SizedBox(width: 4),
                   Text(
                     widget.ground['type'] ?? 'Sports',
-                    style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -779,7 +773,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             if (_selectedDate != null)
               Text(
                 DateFormat('MMMM yyyy').format(_selectedDate!),
-                style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 14, fontWeight: FontWeight.bold),
               ),
           ],
         ),
@@ -824,10 +818,10 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   width: 64,
                   margin: const EdgeInsets.only(right: 12),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFE54F3F) : context.cardBg,
+                    color: isSelected ? const Color(0xFFFF7A2F) : context.cardBg,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFFE54F3F) : context.borderColor,
+                      color: isSelected ? const Color(0xFFFF7A2F) : context.borderColor,
                     ),
                   ),
                   child: Column(
@@ -873,7 +867,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               const SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE54F3F)),
+                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7A2F)),
               ),
           ],
         ),
@@ -967,9 +961,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     String? statusText;
 
     if (isSelected) {
-      bgColor = const Color(0xFFE54F3F);
+      bgColor = const Color(0xFFFF7A2F);
       textColor = const Color(0xFFFFFFFF);
-      borderColor = const Color(0xFFE54F3F);
+      borderColor = const Color(0xFFFF7A2F);
       opacity = 1.0;
       statusText = null;
     } else if (isPast) {
@@ -1109,7 +1103,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               children: [
                 Text(
                   '₹$price',
-                  style: const TextStyle(color: Color(0xFFE54F3F), fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 4),
                 Text('/ ${_formatDuration(_durationMins)}', style: TextStyle(color: context.subTextColor, fontSize: 12)),
@@ -1136,7 +1130,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE54F3F),
+                backgroundColor: const Color(0xFFFF7A2F),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),

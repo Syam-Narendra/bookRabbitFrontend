@@ -96,7 +96,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
         'prefill': {
           'contact': AuthService.currentUser?.phoneNumber ?? '',
         },
-        'theme': {'color': '#E54F3F'},
+        'theme': {'color': '#FF7A2F'},
       };
 
       if (kIsWeb) {
@@ -283,7 +283,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
 
                     const SizedBox(height: 16),
 
-                    // 2. Summary Card starting DIRECTLY BELOW the banner
+                    // 2. Summary Card
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
@@ -297,25 +297,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                       child: _buildPaymentCard().animate().fade(delay: 200.ms).slideY(begin: 0.1),
                     ),
 
-                    const SizedBox(height: 20),
-
-                    // 4. Secured by Razorpay Badge
-                    _buildSecuredBadge().animate().fade(delay: 300.ms),
-
-                    const SizedBox(height: 12),
-
-                    // 5. Pay Button
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _buildPayButton().animate().fade(delay: 400.ms).slideY(begin: 0.1),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // 6. Encrypted Trust Footer
-                    _buildEncryptedFooter().animate().fade(delay: 500.ms),
-
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -328,6 +310,28 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
               child: _buildProcessingOverlay(),
             ),
         ],
+      ),
+      bottomNavigationBar: Container(
+        color: context.bgColor,
+        padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 16),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Your payment is secure and encrypted text
+              _buildEncryptedFooter().animate().fade(delay: 300.ms),
+              const SizedBox(height: 10),
+
+              // 2. Pay button
+              _buildPayButton().animate().fade(delay: 400.ms).slideY(begin: 0.1),
+              const SizedBox(height: 10),
+
+              // 3. Secured by Razorpay text
+              _buildSecuredBadge().animate().fade(delay: 500.ms),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -662,7 +666,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock, size: 13, color: Color(0xFFF2693F)),
+          const Icon(Icons.lock, size: 13, color: Color(0xFFFF7A2F)),
           const SizedBox(width: 4),
           Text(
             'Secured by ',
@@ -670,7 +674,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
           ),
           const Text(
             'Razorpay',
-            style: TextStyle(color: Color(0xFFF2693F), fontWeight: FontWeight.bold, fontSize: 12),
+            style: TextStyle(color: Color(0xFFFF7A2F), fontWeight: FontWeight.bold, fontSize: 12),
           ),
         ],
       ),
@@ -684,11 +688,11 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
         width: double.infinity,
         height: 54,
         decoration: BoxDecoration(
-          color: const Color(0xFFF2693F),
+          color: const Color(0xFFFF7A2F),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFF2693F).withValues(alpha: 0.35),
+              color: const Color(0xFFFF7A2F).withValues(alpha: 0.35),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -724,7 +728,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFFF2693F)),
+          const Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFFFF7A2F)),
           const SizedBox(width: 6),
           Text(
             'Your payment is secure and encrypted',

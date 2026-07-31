@@ -117,51 +117,73 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 );
               }
-              // Narrow — stacked with bottom container
-              return Column(
+              // Narrow — stacked design with top hero gradient & bottom card
+              final heroGradientColors = context.isDark
+                  ? [const Color(0xFF2C1C16), const Color(0xFF1E1410)]
+                  : [const Color(0xFFFF7A2F), const Color(0xFFF2693F)];
+
+              return Stack(
                 children: [
-                  const SizedBox(height: 20),
-                  const Icon(Icons.cruelty_free, color: Colors.white, size: 42)
-                      .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
-                  const SizedBox(height: 8),
-                  const Text('Book Rabbit',
-                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white))
-                      .animate().fade(delay: 100.ms).slideY(begin: 0.2),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(child: Image.asset(cricketRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 200.ms).slideY(begin: 0.2)),
-                        const SizedBox(width: 8),
-                        Expanded(child: Image.asset(footballRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 250.ms).slideY(begin: 0.2)),
-                        const SizedBox(width: 8),
-                        Expanded(child: Image.asset(tennisRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 300.ms).slideY(begin: 0.2)),
-                      ],
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: heroGradientColors,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: context.cardBg,
-                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Welcome!', style: TextStyle(fontSize: 28, color: context.textColor, fontWeight: FontWeight.bold))
-                            .animate().fade(delay: 400.ms).slideY(begin: 0.1),
-                        const SizedBox(height: 8),
-                        Text('Book Rabbit lets you instantly book your favourite sports grounds.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14, color: context.subTextColor, height: 1.4))
-                            .animate().fade(delay: 450.ms).slideY(begin: 0.1),
-                        const SizedBox(height: 24),
-                        _buildForm(context),
-                      ],
-                    ),
+                  Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      const Icon(Icons.cruelty_free, color: Colors.white, size: 40)
+                          .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
+                      const SizedBox(height: 6),
+                      const Text('Book Rabbit',
+                          style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white))
+                          .animate().fade(delay: 100.ms).slideY(begin: 0.2),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(child: Image.asset(cricketRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 200.ms).slideY(begin: 0.2)),
+                              const SizedBox(width: 8),
+                              Expanded(child: Image.asset(footballRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 250.ms).slideY(begin: 0.2)),
+                              const SizedBox(width: 8),
+                              Expanded(child: Image.asset(tennisRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 300.ms).slideY(begin: 0.2)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: context.cardBg,
+                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                        ),
+                        padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Welcome!', style: TextStyle(fontSize: 26, color: context.textColor, fontWeight: FontWeight.bold))
+                                .animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                            const SizedBox(height: 6),
+                            Text('Book Rabbit lets you instantly book your favourite sports grounds.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 13, color: context.subTextColor, height: 1.4))
+                                .animate().fade(delay: 450.ms).slideY(begin: 0.1),
+                            const SizedBox(height: 20),
+                            _buildForm(context),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -260,19 +282,126 @@ class _LoginScreenState extends State<LoginScreen> {
                 : const Text('LOGIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
           ),
         ).animate().fade(delay: 550.ms).slideY(begin: 0.1),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: () => Navigator.pushReplacementNamed(context, '/vendor_login'),
-            child: const Text('Vendor Login',
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(child: Container(height: 1, color: context.borderColor.withValues(alpha: 0.6))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Text(
+                'OR',
                 style: TextStyle(
-                    color: Color(0xFFF2693F),
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Color(0xFFF2693F))),
+                  color: context.subTextColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            Expanded(child: Container(height: 1, color: context.borderColor.withValues(alpha: 0.6))),
+          ],
+        ).animate().fade(delay: 575.ms),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(
+              child: TouchableOpacity(
+                onTap: () => Navigator.pushReplacementNamed(context, '/vendor_login'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: context.cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.borderColor, width: 1.2),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.storefront_rounded, color: Color(0xFFFF7A2F), size: 20),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Vendor Login',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.textColor,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TouchableOpacity(
+                onTap: () => Navigator.pushReplacementNamed(context, '/vendor_login'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: context.cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.borderColor, width: 1.2),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.stadium_rounded, color: Color(0xFFFF7A2F), size: 20),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Register Ground',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.textColor,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
+        const SizedBox(height: 22),
+        Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'By continuing, you agree to our ',
+                style: TextStyle(color: context.subTextColor, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
+              InkWell(
+                onTap: () => Navigator.pushNamed(context, '/terms'),
+                child: const Text(
+                  'Terms & Conditions',
+                  style: TextStyle(color: Color(0xFFFF7A2F), fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Text(
+                ' and ',
+                style: TextStyle(color: context.subTextColor, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
+              InkWell(
+                onTap: () => Navigator.pushNamed(context, '/terms'),
+                child: const Text(
+                  'Privacy Policy',
+                  style: TextStyle(color: Color(0xFFFF7A2F), fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
-        ),
+        ).animate().fade(delay: 650.ms),
       ],
     );
   }
