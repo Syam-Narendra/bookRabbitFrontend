@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/vendor_login_screen.dart';
-import 'screens/vendor_dashboard_screen.dart';
+import 'screens/vendor/vendor_dashboard_screen.dart';
 import 'screens/setup_profile_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/booking_success_screen.dart';

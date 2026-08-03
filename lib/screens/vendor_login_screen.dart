@@ -33,9 +33,16 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
     final phone = _phoneController.text;
     setState(() => _isSubmitting = true);
     try {
-      await VendorAuthService.sendOtp(phone);
+      final devOtp = await VendorAuthService.sendOtp(phone);
       if (!mounted) return;
-      Navigator.push(context, MaterialPageRoute(builder: (_) => VendorOtpScreen(phone: phone)));
+      if (devOtp != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('DEV OTP: $devOtp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          backgroundColor: Colors.black87,
+          duration: const Duration(seconds: 6),
+        ));
+      }
+      Navigator.push(context, MaterialPageRoute(builder: (_) => VendorOtpScreen(phone: phone, devOtp: devOtp)));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

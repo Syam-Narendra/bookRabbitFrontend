@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
@@ -7,7 +8,9 @@ import '../theme/app_theme.dart';
 
 class VendorOtpScreen extends StatefulWidget {
   final String phone;
-  const VendorOtpScreen({super.key, required this.phone});
+  final String? devOtp;
+
+  const VendorOtpScreen({super.key, required this.phone, this.devOtp});
 
   @override
   State<VendorOtpScreen> createState() => _VendorOtpScreenState();
@@ -17,9 +20,20 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
   final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isVerifying = false;
+  bool _isResending = false;
+  int _resendCooldown = 0;
+  Timer? _cooldownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCooldown();
+    _prefillDevOtp();
+  }
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     for (var c in _controllers) {
       c.dispose();
     }
@@ -27,6 +41,76 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
       f.dispose();
     }
     super.dispose();
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _resendCooldown = 30);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_resendCooldown <= 1) {
+        timer.cancel();
+        setState(() => _resendCooldown = 0);
+      } else {
+        setState(() => _resendCooldown = _resendCooldown - 1);
+      }
+    });
+  }
+
+  void _prefillDevOtp() {
+    final otp = widget.devOtp;
+    if (otp == null || otp.length != 6) return;
+    for (int i = 0; i < 6; i++) {
+      _controllers[i].text = otp.substring(i, i + 1);
+    }
+  }
+
+  Future<void> _resend() async {
+    setState(() => _isResending = true);
+    try {
+      final devOtp = await VendorAuthService.sendOtp(widget.phone);
+      if (!mounted) return;
+      _startCooldown();
+      _prefillDevOtp();
+      if (devOtp != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('DEV OTP: $devOtp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          backgroundColor: Colors.black87,
+          duration: const Duration(seconds: 5),
+        ));
+      } else {
+        _showMessage('New OTP sent to your WhatsApp!');
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _isResending = false);
+    }
+  }
+
+  Future<void> _changeNumber() async {
+    try {
+      await VendorAuthService.invalidateOtp(widget.phone);
+    } catch (_) {
+      // Best-effort — the local flow continues regardless.
+    }
+    if (!mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      backgroundColor: const Color(0xFF2E8443),
+    ));
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      backgroundColor: const Color(0xFFD32F2F),
+    ));
   }
 
   @override
@@ -75,6 +159,27 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
                               const SizedBox(height: 8),
                               Text('Sent to +91 ${widget.phone}', style: TextStyle(color: context.subTextColor, fontSize: 16))
                                   .animate().fade(delay: 150.ms),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2E8443).withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.verified, color: Color(0xFF2E8443), size: 16),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'OTP sent to your WhatsApp',
+                                        style: TextStyle(color: context.textColor, fontSize: 13, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               const SizedBox(height: 40),
                               Row(
                                 children: [
@@ -84,7 +189,35 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
                                   ],
                                 ],
                               ),
-                              const SizedBox(height: 40),
+                              const SizedBox(height: 28),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  GestureDetector(
+                                    onTap: _resendCooldown > 0 || _isResending ? null : _resend,
+                                    child: Text(
+                                      _resendCooldown > 0
+                                          ? 'Resend in ${_resendCooldown}s'
+                                          : _isResending
+                                              ? 'Resending…'
+                                              : '↻ Resend OTP',
+                                      style: TextStyle(
+                                        color: _resendCooldown > 0 ? context.subTextColor : const Color(0xFF2E8443),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: _changeNumber,
+                                    child: Text(
+                                      '← Change Number',
+                                      style: TextStyle(color: context.subTextColor, fontSize: 13, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 28),
                               SizedBox(
                                 width: double.infinity,
                                 height: 56,
@@ -97,7 +230,7 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
                                   ),
                                   child: _isVerifying
                                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                                      : const Text('Verify OTP', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      : const Text('Verify & Enter Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                                 ),
                               ).animate().fade(delay: 400.ms),
                               const SizedBox(height: 24),
@@ -137,10 +270,7 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
   Future<void> _verify() async {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please enter the 6-digit OTP.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: Color(0xFFD32F2F),
-      ));
+      _showError('Please enter the 6-digit OTP.');
       return;
     }
     setState(() => _isVerifying = true);
@@ -154,10 +284,7 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
         c.clear();
       }
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: const Color(0xFFD32F2F),
-      ));
+      _showError(e.message);
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }

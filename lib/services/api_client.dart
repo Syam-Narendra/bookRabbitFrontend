@@ -122,6 +122,66 @@ class ApiClient {
     return _decode(response);
   }
 
+  static Future<dynamic> adminDelete(String path, {Map<String, dynamic>? body}) async {
+    final request = http.Request('DELETE', Uri.parse('${AppConstants.apiBaseUrl}$path'));
+    request.headers.addAll(_adminHeaders);
+    if (body != null) request.body = json.encode(body);
+    final streamed = await _send(() => request.send().then(http.Response.fromStream));
+    await _captureAdminCookie(streamed);
+    return _decode(streamed);
+  }
+
+  /// Multipart upload for the vendor/admin APIs (cookie-authenticated).
+  static Future<dynamic> adminUploadBytes(
+    String path, {
+    required List<int> bytes,
+    required String filename,
+    Map<String, String>? fields,
+  }) async {
+    final request = http.MultipartRequest('PATCH', Uri.parse('${AppConstants.apiBaseUrl}$path'));
+    request.headers.addAll(_adminHeaders);
+
+    final ext = filename.split('.').last.toLowerCase();
+    final mimeType = switch (ext) {
+      'png'  => 'image/png',
+      'webp' => 'image/webp',
+      'gif'  => 'image/gif',
+      _      => 'image/jpeg',
+    };
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'images',
+        bytes,
+        filename: filename,
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
+    fields?.forEach((k, v) => request.fields[k] = v);
+
+    final streamedResponse = await request.send();
+    final response = await _send(() => http.Response.fromStream(streamedResponse));
+    await _captureAdminCookie(response);
+    return _decode(response);
+  }
+
+  /// Public multipart POST with no auth headers. Captures any Set-Cookie
+  /// response header as the admin cookie (payment-verify issues the vendor
+  /// session cookie on success).
+  static Future<dynamic> publicUpload(
+    String path, {
+    required Map<String, String> fields,
+    List<http.MultipartFile>? files,
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse('${AppConstants.apiBaseUrl}$path'));
+    fields.forEach((k, v) => request.fields[k] = v);
+    if (files != null) request.files.addAll(files);
+
+    final streamedResponse = await request.send();
+    final response = await _send(() => http.Response.fromStream(streamedResponse));
+    await _captureAdminCookie(response);
+    return _decode(response);
+  }
+
   static Future<dynamic> get(String path) async {
     final response = await _send(
         () => http.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _headers));
