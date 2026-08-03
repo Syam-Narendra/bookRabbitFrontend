@@ -27,6 +27,7 @@ class VendorBillingPage extends StatefulWidget {
 class _VendorBillingPageState extends State<VendorBillingPage> {
   late Razorpay _razorpay;
   bool _processing = false;
+  String? _pendingSubscriptionId;
 
   @override
   void initState() {
@@ -96,9 +97,10 @@ class _VendorBillingPageState extends State<VendorBillingPage> {
     setState(() => _processing = true);
     try {
       final order = await VendorAuthService.createSubscriptionOrder(ground.id);
+      _pendingSubscriptionId = order['subscriptionId'] as String?;
       final options = {
         'key': order['razorpayKeyId'],
-        'subscription_id': order['subscriptionId'],
+        'subscription_id': _pendingSubscriptionId,
         'name': 'Book Rabbit',
         'description': 'Subscription — ${ground.name}',
         'prefill': {'contact': order['ownerPhone'] ?? ''},
@@ -133,7 +135,7 @@ class _VendorBillingPageState extends State<VendorBillingPage> {
     try {
       await VendorAuthService.verifySubscriptionPayment(
         paymentId: paymentId,
-        subscriptionId: '',
+        subscriptionId: _pendingSubscriptionId ?? '',
         signature: signature,
         addGround: false,
       );

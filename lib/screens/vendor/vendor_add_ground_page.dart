@@ -35,6 +35,7 @@ class _VendorAddGroundPageState extends State<VendorAddGroundPage> {
   List<XFile> _images = [];
   bool _isSubmitting = false;
   bool? _isSubscriptionNeeded;
+  String? _pendingSubscriptionId;
   late Razorpay _razorpay;
 
   @override
@@ -167,9 +168,11 @@ class _VendorAddGroundPageState extends State<VendorAddGroundPage> {
       }
 
       // Paid: open Razorpay subscription checkout.
+      final subscriptionId = order['subscriptionId'] as String?;
+      _pendingSubscriptionId = subscriptionId;
       final options = {
         'key': order['razorpayKeyId'],
-        'subscription_id': order['subscriptionId'],
+        'subscription_id': subscriptionId,
         'name': 'Book Rabbit',
         'description': 'Ground Subscription — ₹499/month',
         'prefill': {
@@ -215,7 +218,7 @@ class _VendorAddGroundPageState extends State<VendorAddGroundPage> {
     try {
       await VendorAuthService.verifySubscriptionPayment(
         paymentId: paymentId,
-        subscriptionId: '',
+        subscriptionId: _pendingSubscriptionId ?? '',
         signature: signature,
         addGround: addGround,
         images: _images,
