@@ -529,7 +529,7 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
             children: [
               Icon(Icons.language, color: orangeColor, size: 16),
               const SizedBox(width: 8),
-              Text('https://book.arabbit.in',
+              Text('https://bookrabbit.in',
                   style: TextStyle(color: orangeColor, fontSize: 13, fontWeight: FontWeight.bold)),
             ],
           ),

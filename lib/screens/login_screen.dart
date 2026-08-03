@@ -32,118 +32,124 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.bgColor,
-      body: SafeArea(
-        child: Container(
-          color: context.bgColor,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 720;
-              if (isWide) {
-                return Row(
-                  children: [
-                    // Left banner
-                    Expanded(
-                      flex: 5,
-                      child: Container(
-                        height: double.infinity,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFFFF7A2F), Color(0xFFF2693F)],
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.cruelty_free, color: Colors.white, size: 52)
-                                .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
-                            const SizedBox(height: 16),
-                            const Text('Book Rabbit',
-                                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Colors.white))
-                                .animate().fade(delay: 100.ms).slideY(begin: 0.2),
-                            const SizedBox(height: 12),
-                            Text('Instantly book your favourite sports grounds.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 18, color: Colors.white.withValues(alpha: 0.9), height: 1.5))
-                                .animate().fade(delay: 150.ms).slideY(begin: 0.1),
-                            const SizedBox(height: 40),
-                            Row(
-                              children: [
-                                Expanded(child: Image.asset(cricketRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 200.ms).slideY(begin: 0.2)),
-                                const SizedBox(width: 12),
-                                Expanded(child: Image.asset(footballRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 250.ms).slideY(begin: 0.2)),
-                                const SizedBox(width: 12),
-                                Expanded(child: Image.asset(tennisRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 300.ms).slideY(begin: 0.2)),
-                              ],
-                            ),
-                          ],
+      body: Container(
+        color: context.bgColor,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 720;
+            if (isWide) {
+              return Row(
+                children: [
+                  // Left banner
+                  Expanded(
+                    flex: 5,
+                    child: Container(
+                      height: double.infinity,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFFF7A2F), Color(0xFFF2693F)],
                         ),
                       ),
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.cruelty_free, color: Colors.white, size: 52)
+                              .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
+                          const SizedBox(height: 16),
+                          const Text('Book Rabbit',
+                              style: TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Colors.white))
+                              .animate().fade(delay: 100.ms).slideY(begin: 0.2),
+                          const SizedBox(height: 12),
+                          Text('Instantly book your favourite sports grounds.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 18, color: Colors.white.withValues(alpha: 0.9), height: 1.5))
+                              .animate().fade(delay: 150.ms).slideY(begin: 0.1),
+                          const SizedBox(height: 40),
+                          Row(
+                            children: [
+                              Expanded(child: Image.asset(cricketRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 200.ms).slideY(begin: 0.2)),
+                              const SizedBox(width: 12),
+                              Expanded(child: Image.asset(footballRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 250.ms).slideY(begin: 0.2)),
+                              const SizedBox(width: 12),
+                              Expanded(child: Image.asset(tennisRabbitUrl, fit: BoxFit.contain).animate().fade(delay: 300.ms).slideY(begin: 0.2)),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    // Right — form
-                    Expanded(
-                      flex: 4,
-                      child: Container(
-                        height: double.infinity,
-                        color: context.cardBg,
-                        child: Center(
-                          child: SingleChildScrollView(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 60),
-                              child: Container(
-                                constraints: const BoxConstraints(maxWidth: 420),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text('Welcome!', style: TextStyle(fontSize: 32, color: context.textColor, fontWeight: FontWeight.bold))
-                                        .animate().fade(delay: 400.ms).slideY(begin: 0.1),
-                                    const SizedBox(height: 10),
-                                    Text('Book Rabbit lets you instantly book your favourite sports grounds.',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(fontSize: 15, color: context.subTextColor, height: 1.5))
-                                        .animate().fade(delay: 450.ms).slideY(begin: 0.1),
-                                    const SizedBox(height: 30),
-                                    _buildForm(context),
-                                  ],
-                                ),
+                  ),
+                  // Right — form
+                  Expanded(
+                    flex: 4,
+                    child: Container(
+                      height: double.infinity,
+                      color: context.cardBg,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 60),
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 420),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Welcome!', style: TextStyle(fontSize: 32, color: context.textColor, fontWeight: FontWeight.bold))
+                                      .animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                                  const SizedBox(height: 10),
+                                  Text('Book Rabbit lets you instantly book your favourite sports grounds.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 15, color: context.subTextColor, height: 1.5))
+                                      .animate().fade(delay: 450.ms).slideY(begin: 0.1),
+                                  const SizedBox(height: 30),
+                                  _buildForm(context),
+                                ],
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                );
-              }
-              // Narrow — stacked design with top hero gradient & bottom card
-              final heroGradientColors = context.isDark
-                  ? [const Color(0xFF2C1C16), const Color(0xFF1E1410)]
-                  : [const Color(0xFFFF7A2F), const Color(0xFFF2693F)];
+                  ),
+                ],
+              );
+            }
+            // Narrow — stacked design with top hero gradient & bottom card
+            final heroGradientColors = context.isDark
+                ? [const Color(0xFF2C1C16), const Color(0xFF1E1410)]
+                : [const Color(0xFFFF7A2F), const Color(0xFFF2693F)];
 
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: heroGradientColors,
-                        ),
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: heroGradientColors,
                       ),
                     ),
                   ),
-                  Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      const Icon(Icons.cruelty_free, color: Colors.white, size: 40)
-                          .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
-                      const SizedBox(height: 6),
-                      const Text('Book Rabbit',
-                          style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white))
-                          .animate().fade(delay: 100.ms).slideY(begin: 0.2),
+                ),
+                Column(
+                  children: [
+                    SafeArea(
+                      bottom: false,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 12),
+                          const Icon(Icons.cruelty_free, color: Colors.white, size: 40)
+                              .animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
+                          const SizedBox(height: 6),
+                          const Text('Book Rabbit',
+                              style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white))
+                              .animate().fade(delay: 100.ms).slideY(begin: 0.2),
+                        ],
+                      ),
+                    ),
                       const SizedBox(height: 10),
                       Expanded(
                         child: Padding(
@@ -187,8 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               );
-            },
-          ),
+          },
         ),
       ),
     );

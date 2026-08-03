@@ -3,6 +3,32 @@ import 'api_client.dart';
 class GroundService {
   GroundService._();
 
+  static double? _feePctCache;
+  static DateTime? _feePctCachedAt;
+
+  /// Platform commission percent from server app-config (e.g. 7.0).
+  /// Mirrors the backend default and the backend's 5-minute config cache.
+  static Future<double> getPlatformCommissionPct() async {
+    final now = DateTime.now();
+    if (_feePctCache != null &&
+        _feePctCachedAt != null &&
+        now.difference(_feePctCachedAt!) < const Duration(minutes: 5)) {
+      return _feePctCache!;
+    }
+    double pct = 7.0;
+    try {
+      final data = await ApiClient.get('/api/public/app-config') as Map<String, dynamic>;
+      final config = data['config'] as Map<String, dynamic>? ?? {};
+      final parsed = double.tryParse(config['platform_commission_pct']?.toString() ?? '');
+      if (parsed != null && parsed > 0) pct = parsed;
+    } catch (_) {
+      // Keep the default; the next call retries after the cache window.
+    }
+    _feePctCache = pct;
+    _feePctCachedAt = now;
+    return pct;
+  }
+
   static Future<List<Map<String, dynamic>>> fetchGrounds() async {
     final data = await ApiClient.get('/api/public/grounds') as Map<String, dynamic>;
     final grounds = data['grounds'] as List<dynamic>;

@@ -26,6 +26,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   DateTime? _selectedDate;
   int _durationMins = 60;
   int _basePrice = 600;
+  double _platformFeePct = 7.0;
 
   Set<String> _bookedSegs = {};
   Set<String> _heldSegs = {};
@@ -42,6 +43,13 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     _parsePrice();
     _fetchAvailability();
     _startHeldPolling();
+    _loadPlatformFeePct();
+  }
+
+  Future<void> _loadPlatformFeePct() async {
+    final pct = await GroundService.getPlatformCommissionPct();
+    if (!mounted) return;
+    setState(() => _platformFeePct = pct);
   }
 
   @override
@@ -52,9 +60,10 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   }
 
   void _parsePrice() {
-    final priceStr = widget.ground['price']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '600';
-    if (priceStr.isNotEmpty) {
-      _basePrice = int.tryParse(priceStr) ?? 600;
+    // Read price_per_hour directly as a number to avoid string-parsing bugs.
+    final raw = widget.ground['price_per_hour'];
+    if (raw != null) {
+      _basePrice = (raw as num).round();
     }
   }
 
@@ -231,8 +240,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     }
 
     final fare = ((_basePrice / 60) * _durationMins).round();
-    int platformFee = (fare * 0.03).round();
-    if (platformFee < 10 && fare > 0) platformFee = 10;
+    final platformFee = (fare * (_platformFeePct / 100)).ceil();
     final finalPrice = fare + platformFee;
 
     await Navigator.push(
@@ -291,8 +299,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             final accent = AppTheme.primaryOrangeAccent;
             final tint = accent.withValues(alpha: context.isDark ? 0.16 : 0.08);
             final fare = ((_basePrice / 60) * localDuration).round();
-            int platformFee = (fare * 0.03).round();
-            if (platformFee < 10 && fare > 0) platformFee = 10;
+            final platformFee = (fare * (_platformFeePct / 100)).ceil();
             final total = fare + platformFee;
             final endTime = _calculateEndTime(slot, localDuration);
             final canDecrease = localDuration > 30;
@@ -611,14 +618,14 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       children: [
                         _buildMobileHeroHeader(),
                         Padding(
-                          padding: const EdgeInsets.all(20.0),
+                          padding: const EdgeInsets.all(16.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildTitleAndDetails(),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 14),
                               _buildDateSelector(),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 14),
                               Container(
                                 key: _slotAreaKey,
                                 child: _buildSlotGridSection(),
@@ -681,6 +688,10 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
     final imageUrl = widget.ground['imageUrl'] as String? ?? '';
     final fallback = 'assets/images/sports_bunnies.png';
+
+    if (imageUrl.isEmpty) {
+      return Image.asset(fallback, height: height, width: double.infinity, fit: BoxFit.cover);
+    }
 
     if (imageUrl.startsWith('assets/')) {
       return Image.asset(imageUrl, height: height, width: double.infinity, fit: BoxFit.cover,
@@ -769,32 +780,32 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Select Date', style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Select Date', style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold)),
             if (_selectedDate != null)
               Text(
                 DateFormat('MMMM yyyy').format(_selectedDate!),
-                style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 13, fontWeight: FontWeight.bold),
               ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Row(
           children: [
-            const Icon(Icons.info_outline_rounded, size: 13, color: Color(0xFFD97706)),
+            const Icon(Icons.info_outline_rounded, size: 12, color: Color(0xFFD97706)),
             const SizedBox(width: 4),
             Text(
-              'Bookings are open for next 15 days only',
+              'Bookings open for next 15 days only',
               style: TextStyle(
                 color: context.isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         SizedBox(
-          height: 80,
+          height: 62,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: 15,
@@ -815,11 +826,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   _startHeldPolling();
                 },
                 child: Container(
-                  width: 64,
-                  margin: const EdgeInsets.only(right: 12),
+                  width: 52,
+                  margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
                     color: isSelected ? const Color(0xFFFF7A2F) : context.cardBg,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected ? const Color(0xFFFF7A2F) : context.borderColor,
                     ),
@@ -831,16 +842,16 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                         DateFormat('EEE').format(date).toUpperCase(),
                         style: TextStyle(
                           color: isSelected ? Colors.white : context.subTextColor,
-                          fontSize: 12,
+                          fontSize: 10.5,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         DateFormat('d').format(date),
                         style: TextStyle(
                           color: isSelected ? Colors.white : context.textColor,
-                          fontSize: 18,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

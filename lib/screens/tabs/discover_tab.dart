@@ -49,6 +49,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
   ];
 
   Timer? _searchDebounce;
+  int _searchSequence = 0;
 
   @override
   void initState() {
@@ -69,7 +70,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   /// Request permission, start stream and do an initial fetch
   Future<void> _initLocation() async {
-    setState(() => _isDetectingLocation = true);
+    if (mounted) setState(() => _isDetectingLocation = true);
     try {
       final hasPermission = await _requestLocationPermission();
       if (!hasPermission) {
@@ -207,7 +208,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   /// Manual one-shot GPS trigger when user taps "Use Current Location" in picker
   Future<void> _detectOnce({VoidCallback? closeSheet}) async {
-    setState(() => _isDetectingLocation = true);
+    if (mounted) setState(() => _isDetectingLocation = true);
     try {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -228,6 +229,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
     } catch (_) {
       _setLocationFallback('Unable to detect');
     } finally {
+      if (mounted) setState(() => _isDetectingLocation = false);
       closeSheet?.call();
     }
   }
@@ -266,11 +268,13 @@ class _DiscoverTabState extends State<DiscoverTab> {
   Future<void> _fetchGrounds() async {
     try {
       final grounds = await GroundService.fetchGrounds();
+      if (!mounted) return;
       setState(() {
         allGrounds = _sortByDistance(grounds);
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         hasError = true;
         isLoading = false;
@@ -352,10 +356,11 @@ class _DiscoverTabState extends State<DiscoverTab> {
                 });
                 return;
               }
+              final token = ++_searchSequence;
               setModalState(() => isSearching = true);
               _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
                 final results = await _searchPlaces(query);
-                if (ctx.mounted) {
+                if (ctx.mounted && token == _searchSequence) {
                   setModalState(() {
                     suggestions = results;
                     isSearching = false;
@@ -1123,26 +1128,11 @@ class _DiscoverTabState extends State<DiscoverTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Hero(
-              tag: 'ground_image_${ground['id'] ?? ground['title']}',
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(
-                    image: ground['imageUrl'].startsWith('http')
-                        ? NetworkImage(ground['imageUrl'])
-                            as ImageProvider
-                        : AssetImage(ground['imageUrl']),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
+            child: _buildGroundImage(ground),
           ),
           const SizedBox(height: 8),
           Text(
-            ground['title'],
+            (ground['title'] as String?) ?? '',
             style: TextStyle(
               color: context.textColor,
               fontSize: 15,
@@ -1157,7 +1147,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
             children: [
               Flexible(
                 child: Text(
-                  ground['price'],
+                  (ground['price'] as String?) ?? '',
                   style: const TextStyle(
                       color: Color(0xFFE54F3F),
                       fontSize: 13,
@@ -1186,9 +1176,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  ground['city']?.toString().isNotEmpty == true
-                      ? ground['city']
-                      : ground['location'],
+                  (ground['city']?.toString().isNotEmpty == true
+                      ? ground['city'].toString()
+                      : ground['location']?.toString() ?? ''),
                   style: const TextStyle(
                       color: Color(0xFF98989E), fontSize: 12),
                   maxLines: 1,
@@ -1212,6 +1202,28 @@ class _DiscoverTabState extends State<DiscoverTab> {
         ],
       ),
     );
+  }
+
+  Widget _buildGroundImage(Map<String, dynamic> ground) {
+    final imageUrl = ground['imageUrl']?.toString() ?? '';
+    final isNetwork = imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
+    final imageProvider = isNetwork
+        ? NetworkImage(imageUrl) as ImageProvider
+        : AssetImage(imageUrl);
+
+    Widget image = Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
+      ),
+    );
+
+    final id = ground['id']?.toString();
+    if (id != null && id.isNotEmpty) {
+      image = Hero(tag: 'ground_image_$id', child: image);
+    }
+    return image;
   }
 
   /// Returns a real GPS-based distance string, or '—' if position unknown.

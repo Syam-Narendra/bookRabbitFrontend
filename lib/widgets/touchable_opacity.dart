@@ -23,6 +23,7 @@ class _TouchableOpacityState extends State<TouchableOpacity>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
+  DateTime? _lastTapAt;
 
   @override
   void initState() {
@@ -55,10 +56,15 @@ class _TouchableOpacityState extends State<TouchableOpacity>
   }
 
   void _onTapUp(TapUpDetails details) {
-    if (widget.onTap != null) {
-      _controller.reverse();
-      widget.onTap!();
+    if (widget.onTap == null) return;
+    _controller.reverse();
+    // Debounce rapid double-taps so navigation/actions fire only once.
+    final now = DateTime.now();
+    if (_lastTapAt != null && now.difference(_lastTapAt!) < const Duration(milliseconds: 350)) {
+      return;
     }
+    _lastTapAt = now;
+    widget.onTap!();
   }
 
   void _onTapCancel() {

@@ -16,6 +16,7 @@ class BookingSuccessScreen extends StatelessWidget {
   final String startTime;
   final String endTime;
   final int finalPrice;
+  final int? platformFee;
 
   const BookingSuccessScreen({
     super.key,
@@ -25,6 +26,7 @@ class BookingSuccessScreen extends StatelessWidget {
     required this.startTime,
     required this.endTime,
     required this.finalPrice,
+    this.platformFee,
   });
 
   String _calculateDuration(String start, String end) {
@@ -32,13 +34,32 @@ class BookingSuccessScreen extends StatelessWidget {
       final format = DateFormat('hh:mm a');
       final d1 = format.parse(start);
       final d2 = format.parse(end);
-      final diff = d2.difference(d1);
-      final hours = diff.inHours;
-      if (hours > 0) return '$hours Hours';
-      return '${diff.inMinutes} Mins';
+      var mins = d2.difference(d1).inMinutes;
+      if (mins <= 0) mins += 24 * 60; // Overnight slot (e.g. 11 PM → 1 AM)
+      if (mins % 60 == 0) return '${mins ~/ 60} Hours';
+      return '${(mins / 60).toStringAsFixed(1).replaceFirst(RegExp(r'\.0$'), '')} Hours';
     } catch (e) {
       return '';
     }
+  }
+
+  Widget _groundImage(double size) {
+    const fallback = 'assets/images/sports_bunnies.png';
+    final url = ground['imageUrl']?.toString() ?? '';
+    if (url.startsWith('assets/')) {
+      return Image.asset(url, width: size, height: size, fit: BoxFit.cover);
+    }
+    if (url.isNotEmpty) {
+      return Image.network(
+        url,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) =>
+            Image.asset(fallback, width: size, height: size, fit: BoxFit.cover),
+      );
+    }
+    return Image.asset(fallback, width: size, height: size, fit: BoxFit.cover);
   }
 
   @override
@@ -325,12 +346,7 @@ class BookingSuccessScreen extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                ground['imageUrl'] ?? 'https://via.placeholder.com/150',
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-              ),
+              child: _groundImage(72),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -413,17 +429,18 @@ class BookingSuccessScreen extends StatelessWidget {
         // Payment Status Box
         GestureDetector(
           onTap: () {
+            final fee = platformFee;
             final bookingMap = {
               'status': 'Upcoming',
-              'images': [ground['imageUrl'] ?? 'https://via.placeholder.com/800'],
+              'images': [if (ground['imageUrl']?.toString().isNotEmpty == true) ground['imageUrl'].toString()],
               'title': ground['title'] ?? '',
               'type': 'Sports',
               'address': ground['location'] ?? '',
               'date': DateFormat('dd MMM yyyy').format(date),
               'time': '$startTime – $endTime',
               'referenceId': referenceId,
-              'fare': finalPrice - 20,
-              'platformFee': 20,
+              'fare': fee == null ? null : finalPrice - fee,
+              'platformFee': fee,
               'totalAmount': finalPrice,
             };
             Navigator.push(
@@ -554,7 +571,7 @@ class BookingSuccessScreen extends StatelessWidget {
             const SizedBox(width: 6),
             GestureDetector(
               onTap: () async {
-                final Uri supportUri = Uri.parse('https://bookrabbit.com/support');
+                final Uri supportUri = Uri.parse('https://bookrabbit.in/support');
                 if (await canLaunchUrl(supportUri)) {
                   await launchUrl(supportUri);
                 }

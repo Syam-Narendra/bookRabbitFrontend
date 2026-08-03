@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -22,6 +23,20 @@ class AuthException extends ApiException {
 /// Thin HTTP wrapper: base URL + bearer-token auth header + JSON error unpacking.
 class ApiClient {
   ApiClient._();
+
+  static const _timeout = Duration(seconds: 20);
+
+  /// Enforces a request timeout and converts transport failures into a
+  /// user-facing [ApiException] instead of an unhandled raw exception.
+  static Future<http.Response> _send(Future<http.Response> Function() send) async {
+    try {
+      return await send().timeout(_timeout);
+    } on TimeoutException {
+      throw const ApiException('Request timed out. Please check your connection and try again.');
+    } on http.ClientException {
+      throw const ApiException('Network error. Please check your connection.');
+    }
+  }
 
   static String? _token;
 
@@ -68,7 +83,7 @@ class ApiClient {
 
   static Map<String, String> get _adminHeaders => {
         'Content-Type': 'application/json',
-        if (_adminCookie != null) 'Cookie': _adminCookie!,
+        'Cookie': ?_adminCookie,
       };
 
   /// Captures the `name=value` part of a `Set-Cookie` response header (if
@@ -81,53 +96,53 @@ class ApiClient {
   }
 
   static Future<dynamic> adminGet(String path) async {
-    final response =
-        await http.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _adminHeaders);
+    final response = await _send(() =>
+        http.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _adminHeaders));
     await _captureAdminCookie(response);
     return _decode(response);
   }
 
   static Future<dynamic> adminPost(String path, {Map<String, dynamic>? body}) async {
-    final response = await http.post(
-      Uri.parse('${AppConstants.apiBaseUrl}$path'),
-      headers: _adminHeaders,
-      body: body != null ? json.encode(body) : null,
-    );
+    final response = await _send(() => http.post(
+          Uri.parse('${AppConstants.apiBaseUrl}$path'),
+          headers: _adminHeaders,
+          body: body != null ? json.encode(body) : null,
+        ));
     await _captureAdminCookie(response);
     return _decode(response);
   }
 
   static Future<dynamic> adminPatch(String path, {Map<String, dynamic>? body}) async {
-    final response = await http.patch(
-      Uri.parse('${AppConstants.apiBaseUrl}$path'),
-      headers: _adminHeaders,
-      body: body != null ? json.encode(body) : null,
-    );
+    final response = await _send(() => http.patch(
+          Uri.parse('${AppConstants.apiBaseUrl}$path'),
+          headers: _adminHeaders,
+          body: body != null ? json.encode(body) : null,
+        ));
     await _captureAdminCookie(response);
     return _decode(response);
   }
 
   static Future<dynamic> get(String path) async {
-    final response =
-        await http.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _headers);
+    final response = await _send(
+        () => http.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _headers));
     return _decode(response);
   }
 
   static Future<dynamic> post(String path, {Map<String, dynamic>? body}) async {
-    final response = await http.post(
-      Uri.parse('${AppConstants.apiBaseUrl}$path'),
-      headers: _headers,
-      body: body != null ? json.encode(body) : null,
-    );
+    final response = await _send(() => http.post(
+          Uri.parse('${AppConstants.apiBaseUrl}$path'),
+          headers: _headers,
+          body: body != null ? json.encode(body) : null,
+        ));
     return _decode(response);
   }
 
   static Future<dynamic> patch(String path, {Map<String, dynamic>? body}) async {
-    final response = await http.patch(
-      Uri.parse('${AppConstants.apiBaseUrl}$path'),
-      headers: _headers,
-      body: body != null ? json.encode(body) : null,
-    );
+    final response = await _send(() => http.patch(
+          Uri.parse('${AppConstants.apiBaseUrl}$path'),
+          headers: _headers,
+          body: body != null ? json.encode(body) : null,
+        ));
     return _decode(response);
   }
 
@@ -160,7 +175,7 @@ class ApiClient {
     );
 
     final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+    final response = await _send(() => http.Response.fromStream(streamedResponse));
     return _decode(response);
   }
 
@@ -192,7 +207,7 @@ class ApiClient {
     );
 
     final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+    final response = await _send(() => http.Response.fromStream(streamedResponse));
     return _decode(response);
   }
 

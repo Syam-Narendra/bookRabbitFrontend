@@ -28,6 +28,18 @@ class _AccountTabState extends State<AccountTab> {
   int _upcomingCount = 0;
   double _hoursTotal = 0;
 
+  String? get _profileImageUrl {
+    final url = AuthService.currentUser?.profileImageUrl;
+    return (url == null || url.isEmpty) ? null : url;
+  }
+
+  String get _profileInitials {
+    final name = AuthService.currentUser?.fullName ?? '';
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    return parts.take(2).map((e) => e[0]).join().toUpperCase();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +101,7 @@ class _AccountTabState extends State<AccountTab> {
       return;
     }
 
+    if (!mounted) return;
     setState(() => _isUploadingPhoto = true);
     try {
       await AuthService.updateProfileImageBytes(bytes, pickedFile.name);
@@ -609,10 +622,19 @@ class _AccountTabState extends State<AccountTab> {
                 ),
                 child: CircleAvatar(
                   radius: 42,
-                  backgroundImage: NetworkImage(
-                    AuthService.currentUser?.profileImageUrl ??
-                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000&auto=format&fit=crop',
-                  ),
+                  backgroundColor: const Color(0xFFFF5200).withValues(alpha: 0.12),
+                  backgroundImage: _profileImageUrl != null
+                      ? NetworkImage(_profileImageUrl!)
+                      : null,
+                  child: _profileImageUrl == null
+                      ? Text(
+                          _profileInitials,
+                          style: const TextStyle(
+                              color: Color(0xFFFF5200),
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700),
+                        )
+                      : null,
                 ),
               ),
               Positioned(
@@ -1002,7 +1024,8 @@ class _AccountTabState extends State<AccountTab> {
   }
 
   String _formatHours(double hours) {
-    return hours % 1 == 0 ? hours.toInt().toString() : hours.toStringAsFixed(1);
+    final rounded = (hours * 10).round() / 10;
+    return rounded % 1 == 0 ? rounded.toInt().toString() : rounded.toStringAsFixed(1);
   }
 
   Widget _buildStatCard(String label, String value, IconData icon) {
@@ -1063,54 +1086,5 @@ class _AccountTabState extends State<AccountTab> {
       ),
     );
   }
-}
-
-class ArcFooterPainter extends CustomPainter {
-  final Color color;
-
-  ArcFooterPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint arcPaint = Paint()
-      ..color = color.withValues(alpha: 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-
-    // Top subtle upward arc
-    final Path topArc = Path();
-    topArc.moveTo(8, size.height * 0.18);
-    topArc.quadraticBezierTo(
-      size.width / 2,
-      -6,
-      size.width - 8,
-      size.height * 0.18,
-    );
-    canvas.drawPath(topArc, arcPaint);
-
-    // Bottom subtle downward arc
-    final Path bottomArc = Path();
-    bottomArc.moveTo(8, size.height * 0.82);
-    bottomArc.quadraticBezierTo(
-      size.width / 2,
-      size.height + 6,
-      size.width - 8,
-      size.height * 0.82,
-    );
-    canvas.drawPath(bottomArc, arcPaint);
-
-    // Decorative side dots
-    final Paint dotPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(8, size.height * 0.18), 2.0, dotPaint);
-    canvas.drawCircle(Offset(size.width - 8, size.height * 0.18), 2.0, dotPaint);
-    canvas.drawCircle(Offset(8, size.height * 0.82), 2.0, dotPaint);
-    canvas.drawCircle(Offset(size.width - 8, size.height * 0.82), 2.0, dotPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 

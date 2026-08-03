@@ -125,6 +125,17 @@ class BookingService {
         status = 'Completed';
       }
 
+      final createdAtRaw = row['created_at'];
+      String bookedOn = '';
+      if (createdAtRaw != null) {
+        try {
+          final created = DateTime.parse(createdAtRaw.toString()).toLocal();
+          bookedOn = DateFormat('d MMM yyyy, h:mm a').format(created);
+        } catch (_) {
+          bookedOn = '';
+        }
+      }
+
       return <String, dynamic>{
         'title': row['ground_name'] ?? '',
         'type': row['tag'] ?? row['type'] ?? '',
@@ -142,6 +153,8 @@ class BookingService {
         'platformFee': platformFee,
         'totalAmount': total,
         'durationHours': durationHours,
+        'bookedOn': bookedOn,
+        'transactionId': row['razorpay_payment_id'] ?? '',
       };
     }).toList();
   }

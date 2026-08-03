@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../widgets/touchable_opacity.dart';
 
@@ -13,6 +14,7 @@ const _kBorder       = Color(0xFFE8E8E8);       // card border
 const _kSoftOrange   = Color(0xFFFFF6F2);       // soft lightest orange card tint
 const _kOrangeBorder = Color(0xFFFDE7DC);       // soft orange border
 const _kGreenSoft    = Color(0xFFE8F8EE);       // confirmed status box bg
+const _kRed          = Color(0xFFD93025);       // cancelled status red
 // ────────────────────────────────────────────────────────────────────────────
 
 class BookingDetailScreen extends StatelessWidget {
@@ -32,39 +34,41 @@ class BookingDetailScreen extends StatelessWidget {
     final textColor = context.textColor;
     final borderCol = isDark ? const Color(0xFF3A3A3C) : _kBorder;
 
-    // Derived fields from booking data with robust fallbacks
-    final title        = (booking['title'] as String?) ?? 'Sports Arena';
+    // Derived fields from booking data. Missing values render as "—" rather
+    // than fabricated sample data — never invent booking/transaction IDs.
+    final title        = (booking['title'] as String?)?.isNotEmpty == true
+        ? (booking['title'] as String)
+        : 'Sports Arena';
     final status       = (booking['status'] as String?) ?? 'Upcoming';
     final isUpcoming   = status == 'Upcoming';
+    final isCancelled  = status == 'Cancelled';
 
     final address      = (booking['address'] as String?) ?? '';
     final city         = (booking['city'] as String?) ?? '';
     final location     = [if (address.isNotEmpty) address, if (city.isNotEmpty) city].join(', ');
-    final finalLoc     = location.isNotEmpty ? location : 'Madhapur, Hyderabad';
 
     final sportType    = (booking['type'] as String?)?.isNotEmpty == true
         ? (booking['type'] as String)
         : 'Cricket';
-    final distance     = (booking['distance'] as String?) ?? '2.3 km away';
+    final distance     = (booking['distance'] as String?) ?? '';
+    final bookedOn     = (booking['bookedOn'] as String?) ?? '';
+    final refId        = (booking['referenceId'] as String?) ?? '';
 
-    final bookedOn     = (booking['bookedOn'] as String?) ?? '25 Jul 2026, 10:30 AM';
-    final refId        = (booking['referenceId'] as String?)?.isNotEmpty == true
-        ? (booking['referenceId'] as String)
-        : 'BR-31JUL6F7A2';
+    final dateStr      = (booking['date'] as String?) ?? '';
+    final timeStr      = (booking['time'] as String?) ?? '';
+    final durH         = (booking['durationHours'] as num?)?.toDouble();
+    final durLabel     = durH == null
+        ? '—'
+        : durH == durH.roundToDouble()
+            ? '${durH.toInt()} hrs'
+            : '${durH.toStringAsFixed(1)} hrs';
 
-    final dateStr      = (booking['date'] as String?) ?? '31 Jul 2026, Friday';
-    final timeStr      = (booking['time'] as String?) ?? '5:30 PM – 7:00 PM';
-    final durH         = (booking['durationHours'] as num?)?.toDouble() ?? 1.5;
-    final durLabel     = durH == durH.roundToDouble()
-        ? '${durH.toInt()} hrs'
-        : '${durH.toStringAsFixed(1)} hrs';
+    final fare         = (booking['fare'] as num?)?.toDouble();
+    final platformFee  = (booking['platformFee'] as num?)?.toDouble();
+    final totalAmount  = (booking['totalAmount'] as num?)?.toDouble();
 
-    final fare         = (booking['fare'] as num?)?.toDouble() ?? 750;
-    final platformFee  = (booking['platformFee'] as num?)?.toDouble() ?? 49;
-    final totalAmount  = (booking['totalAmount'] as num?)?.toDouble() ?? (fare + platformFee);
-
-    final paymentMethod = (booking['paymentMethod'] as String?) ?? 'UPI – PhonePe';
-    final txnId         = (booking['transactionId'] as String?) ?? 'T2407251030456789';
+    final paymentMethod = (booking['paymentMethod'] as String?) ?? '';
+    final txnId         = (booking['transactionId'] as String?) ?? '';
 
     // Image URL resolution
     final List<String> images = [];
@@ -133,7 +137,7 @@ class BookingDetailScreen extends StatelessWidget {
                               title: title,
                               status: status,
                               isUpcoming: isUpcoming,
-                              location: finalLoc,
+                              location: location,
                               distance: distance,
                               sportType: sportType,
                               imageUrl: imageUrl,
@@ -149,16 +153,15 @@ class BookingDetailScreen extends StatelessWidget {
                             // ── Booking Details Card ──────────────────────────
                             _sectionHeader('Booking Details'),
                             const SizedBox(height: 8),
-                            _buildBookingDetailsCard(
-                              context: context,
-                              dateStr: dateStr,
-                              timeStr: timeStr,
-                              durLabel: durLabel,
-                              refId: refId,
-                              cardBg: cardBg,
-                              borderCol: borderCol,
-                              textColor: textColor,
-                            ).animate().fade(delay: 60.ms, duration: 300.ms).slideY(begin: 0.04),
+            _buildBookingDetailsCard(
+              context: context,
+              dateStr: dateStr,
+              timeStr: timeStr,
+              durLabel: durLabel,
+              cardBg: cardBg,
+              borderCol: borderCol,
+              textColor: textColor,
+            ).animate().fade(delay: 60.ms, duration: 300.ms).slideY(begin: 0.04),
 
                             const SizedBox(height: 18),
 
@@ -184,7 +187,8 @@ class BookingDetailScreen extends StatelessWidget {
                               context: context,
                               paymentMethod: paymentMethod,
                               txnId: txnId,
-                              refId: refId,
+                              isCancelled: isCancelled,
+                              isUpcoming: isUpcoming,
                               cardBg: cardBg,
                               borderCol: borderCol,
                               textColor: textColor,
@@ -280,8 +284,13 @@ class BookingDetailScreen extends StatelessWidget {
     required Color borderCol,
     required bool isDark,
   }) {
-    final statusTxt = isUpcoming ? _kOrange : _kGreen;
-    final statusBg  = isUpcoming ? const Color(0xFFFFF0E8) : const Color(0xFFE8F8EE);
+    final bool cancelled = status == 'Cancelled';
+    final statusTxt = cancelled
+        ? _kRed
+        : (isUpcoming ? _kOrange : _kGreen);
+    final statusBg = cancelled
+        ? const Color(0xFFFDECEC)
+        : (isUpcoming ? const Color(0xFFFFF0E8) : const Color(0xFFE8F8EE));
 
     return Container(
       decoration: BoxDecoration(
@@ -328,7 +337,9 @@ class BookingDetailScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isUpcoming ? 'Upcoming' : 'Completed',
+                        cancelled
+                            ? 'Cancelled'
+                            : (isUpcoming ? 'Upcoming' : 'Completed'),
                         style: TextStyle(
                           color: statusTxt,
                           fontSize: 11,
@@ -339,11 +350,12 @@ class BookingDetailScreen extends StatelessWidget {
                     const SizedBox(height: 8),
 
                     // Location
-                    _metaRow(Icons.location_on_rounded, location),
-                    const SizedBox(height: 4),
-
-                    // Distance
-                    _metaRow(Icons.navigation_rounded, distance),
+                    if (location.isNotEmpty) _metaRow(Icons.location_on_rounded, location),
+                    if (distance.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      // Distance
+                      _metaRow(Icons.navigation_rounded, distance),
+                    ],
                     const SizedBox(height: 4),
 
                     // Sport Type
@@ -357,7 +369,6 @@ class BookingDetailScreen extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Bottom Dual Soft Orange Boxes ──────────────────────────────────
-          // ── Bottom Dual Soft Orange Boxes ──────────────────────────────────
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -369,7 +380,11 @@ class BookingDetailScreen extends StatelessWidget {
                     isDark: isDark,
                     icon: Icons.calendar_today_rounded,
                     label: 'Booked on',
-                    value: bookedOn.contains(', ') ? bookedOn.replaceFirst(', ', ',\n') : bookedOn,
+                    value: bookedOn.isEmpty
+                        ? '—'
+                        : (bookedOn.contains(', ')
+                            ? bookedOn.replaceFirst(', ', ',\n')
+                            : bookedOn),
                     maxLines: 2,
                   ),
                 ),
@@ -478,7 +493,6 @@ class BookingDetailScreen extends StatelessWidget {
     required String dateStr,
     required String timeStr,
     required String durLabel,
-    required String refId,
     required Color cardBg,
     required Color borderCol,
     required Color textColor,
@@ -502,13 +516,14 @@ class BookingDetailScreen extends StatelessWidget {
   // ─── FARE DETAILS CARD ─────────────────────────────────────────────────────
   Widget _buildFareDetailsCard({
     required BuildContext context,
-    required double fare,
-    required double platformFee,
-    required double totalAmount,
+    required double? fare,
+    required double? platformFee,
+    required double? totalAmount,
     required Color cardBg,
     required Color borderCol,
     required Color textColor,
   }) {
+    String fmt(double? v) => v == null ? '—' : '₹${v.round()}';
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
@@ -518,9 +533,9 @@ class BookingDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         children: [
-          _fareRow(context, 'Ground Fare', '₹${fare.round()}'),
+          _fareRow(context, 'Ground Fare', fmt(fare)),
           const SizedBox(height: 8),
-          _fareRow(context, 'Platform Fee', '₹${platformFee.round()}'),
+          _fareRow(context, 'Platform Fee', fmt(platformFee)),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Divider(height: 1, thickness: 1, color: borderCol),
@@ -533,7 +548,7 @@ class BookingDetailScreen extends StatelessWidget {
                 style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w700),
               ),
               Text(
-                '₹${totalAmount.round()}',
+                fmt(totalAmount),
                 style: const TextStyle(color: _kOrange, fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ],
@@ -548,12 +563,17 @@ class BookingDetailScreen extends StatelessWidget {
     required BuildContext context,
     required String paymentMethod,
     required String txnId,
-    required String refId,
+    required bool isCancelled,
+    required bool isUpcoming,
     required Color cardBg,
     required Color borderCol,
     required Color textColor,
     required bool isDark,
   }) {
+    final bool isPhonePe = paymentMethod.toLowerCase().contains('phonepe');
+    final String statusText = isCancelled
+        ? 'Refunded'
+        : (txnId.isEmpty ? '—' : 'Paid Successfully');
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
@@ -571,23 +591,28 @@ class BookingDetailScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 const Text('Payment Method', style: TextStyle(color: _kGrey, fontSize: 13)),
                 const Spacer(),
-                Text(paymentMethod, style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 6),
-                // PhonePe style icon pill
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF5F259E), // PhonePe purple
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'पे',
-                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                Text(
+                  paymentMethod.isEmpty ? '—' : paymentMethod,
+                  style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                if (isPhonePe) ...[
+                  const SizedBox(width: 6),
+                  // PhonePe style icon pill
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF5F259E), // PhonePe purple
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'पे',
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -604,17 +629,19 @@ class BookingDetailScreen extends StatelessWidget {
                 const Spacer(),
                 Flexible(
                   child: Text(
-                    txnId,
+                    txnId.isEmpty ? '—' : txnId,
                     style: TextStyle(color: textColor, fontSize: 12.5, fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 6),
-                TouchableOpacity(
-                  onTap: () => _copyToClipboard(context, txnId, 'Transaction ID copied!'),
-                  child: const Icon(Icons.copy_rounded, color: _kOrange, size: 15),
-                ),
+                if (txnId.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  TouchableOpacity(
+                    onTap: () => _copyToClipboard(context, txnId, 'Transaction ID copied!'),
+                    child: const Icon(Icons.copy_rounded, color: _kOrange, size: 15),
+                  ),
+                ],
               ],
             ),
           ),
@@ -629,54 +656,59 @@ class BookingDetailScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 const Text('Payment Status', style: TextStyle(color: _kGrey, fontSize: 13)),
                 const Spacer(),
-                const Text(
-                  'Paid Successfully',
-                  style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.w700),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    color: isCancelled ? _kRed : _kGreen,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Confirmed Banner inside Payment Details
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(10, 2, 10, 10),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E3326) : _kGreenSoft,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: _kGreen,
-                    shape: BoxShape.circle,
+          // Confirmed Banner only for active bookings
+          if (!isCancelled)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(10, 2, 10, 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E3326) : _kGreenSoft,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: _kGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check, color: Colors.white, size: 12),
                   ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 12),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Your booking is confirmed.',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Show this booking ID at the venue.',
-                        style: TextStyle(color: _kGrey, fontSize: 11),
-                      ),
-                    ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isUpcoming ? 'Your booking is confirmed.' : 'Booking completed.',
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Show this booking ID at the venue.',
+                          style: TextStyle(color: _kGrey, fontSize: 11),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -822,19 +854,24 @@ class BookingDetailScreen extends StatelessWidget {
     );
   }
 
-  void _shareBooking(String title, String dateStr, String timeStr, double total) {
-    final text = '🏟️ $title\n📅 $dateStr\n⏰ $timeStr\n💰 Total: ₹${total.round()}\n\nBooked with Book Rabbit! 🐰';
+  void _shareBooking(String title, String dateStr, String timeStr, double? total) {
+    final totalLabel = total == null ? '—' : '₹${total.round()}';
+    final text = '🏟️ $title\n📅 $dateStr\n⏰ $timeStr\n💰 Total: $totalLabel\n\nBooked with Book Rabbit! 🐰';
     SharePlus.instance.share(ShareParams(text: text));
   }
 
-  void _callSupport(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Connecting to Book Rabbit Customer Support...'),
-        duration: Duration(seconds: 2),
-        backgroundColor: _kOrange,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _callSupport(BuildContext context) async {
+    final uri = Uri(scheme: 'tel', path: '+919876543210');
+    final launched = await launchUrl(uri);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the dialer.'),
+          duration: Duration(seconds: 2),
+          backgroundColor: _kOrange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

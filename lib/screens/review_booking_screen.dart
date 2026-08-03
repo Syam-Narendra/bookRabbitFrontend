@@ -45,6 +45,12 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
   bool _isVerifyingPayment = false;
   BookingOrder? _order;
 
+  /// Display the server-computed breakdown once the order is created, so the
+  /// shown price always matches the actual charge.
+  int get _displayFare => _order?.baseAmount.round() ?? widget.fare;
+  int get _displayFee => _order?.platformFee.round() ?? widget.platformFee;
+  int get _displayTotal => _order?.totalAmount.round() ?? widget.finalPrice;
+
   @override
   void initState() {
     super.initState();
@@ -149,7 +155,8 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             date: widget.date,
             startTime: widget.startTime,
             endTime: widget.endTime,
-            finalPrice: widget.finalPrice,
+            finalPrice: _order?.totalAmount.round() ?? widget.finalPrice,
+            platformFee: _order?.platformFee.round() ?? widget.platformFee,
           ),
         ),
         (route) => route.isFirst,
@@ -212,7 +219,8 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             date: widget.date,
             startTime: widget.startTime,
             endTime: widget.endTime,
-            finalPrice: widget.finalPrice,
+            finalPrice: _order?.totalAmount.round() ?? widget.finalPrice,
+            platformFee: _order?.platformFee.round() ?? widget.platformFee,
           ),
         ),
         (route) => route.isFirst,
@@ -271,38 +279,39 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       backgroundColor: context.bgColor,
       body: Stack(
         children: [
-          SingleChildScrollView(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Column(
-                  children: [
-                    // 1. Top Header Banner
-                    _buildHeaderBanner(context, topInset),
+          if (!_isVerifyingPayment)
+            SingleChildScrollView(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Column(
+                    children: [
+                      // 1. Top Header Banner
+                      _buildHeaderBanner(context, topInset),
 
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // 2. Summary Card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
-                    ),
+                      // 2. Summary Card
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
+                      ),
 
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // 3. Payment Details Card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _buildPaymentCard().animate().fade(delay: 200.ms).slideY(begin: 0.1),
-                    ),
+                      // 3. Payment Details Card
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildPaymentCard().animate().fade(delay: 200.ms).slideY(begin: 0.1),
+                      ),
 
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
           // Full-screen Payment Processing Overlay
           if (_isVerifyingPayment)
@@ -311,28 +320,30 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             ),
         ],
       ),
-      bottomNavigationBar: Container(
-        color: context.bgColor,
-        padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 16),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 1. Your payment is secure and encrypted text
-              _buildEncryptedFooter().animate().fade(delay: 300.ms),
-              const SizedBox(height: 10),
+      bottomNavigationBar: _isVerifyingPayment
+          ? null
+          : Container(
+              color: context.bgColor,
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 16),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 1. Your payment is secure and encrypted text
+                    _buildEncryptedFooter().animate().fade(delay: 300.ms),
+                    const SizedBox(height: 10),
 
-              // 2. Pay button
-              _buildPayButton().animate().fade(delay: 400.ms).slideY(begin: 0.1),
-              const SizedBox(height: 10),
+                    // 2. Pay button
+                    _buildPayButton().animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 10),
 
-              // 3. Secured by Razorpay text
-              _buildSecuredBadge().animate().fade(delay: 500.ms),
-            ],
-          ),
-        ),
-      ),
+                    // 3. Secured by Razorpay text
+                    _buildSecuredBadge().animate().fade(delay: 500.ms),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -504,7 +515,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 44,
@@ -536,6 +547,8 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                         fontSize: 12.5,
                         height: 1.3,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -547,34 +560,35 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             children: [
               const Icon(Icons.calendar_month_outlined, color: Color(0xFFF2693F), size: 18),
               const SizedBox(width: 8),
-              Text(
-                DateFormat('EEEE, MMM d, yyyy').format(widget.date),
-                style: TextStyle(
-                  color: context.textColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  DateFormat('EEEE, MMM d, yyyy').format(widget.date),
+                  style: TextStyle(
+                    color: context.textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.access_time_rounded, color: Color(0xFFF2693F), size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${widget.startTime} - ${widget.endTime}',
-                    style: TextStyle(
-                      color: context.textColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+              const Icon(Icons.access_time_rounded, color: Color(0xFFF2693F), size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${widget.startTime} → ${widget.endTime}',
+                  style: TextStyle(
+                    color: context.textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -634,7 +648,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Ground Fare', style: TextStyle(color: context.subTextColor, fontSize: 14.5)),
-              Text('₹${widget.fare}', style: TextStyle(color: context.textColor, fontSize: 14.5, fontWeight: FontWeight.w600)),
+              Text('₹$_displayFare', style: TextStyle(color: context.textColor, fontSize: 14.5, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 10),
@@ -642,7 +656,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Platform Fee', style: TextStyle(color: context.subTextColor, fontSize: 14.5)),
-              Text('₹${widget.platformFee}', style: TextStyle(color: context.textColor, fontSize: 14.5, fontWeight: FontWeight.w600)),
+              Text('₹$_displayFee', style: TextStyle(color: context.textColor, fontSize: 14.5, fontWeight: FontWeight.w600)),
             ],
           ),
           Divider(color: context.borderColor, height: 28),
@@ -651,7 +665,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             children: [
               Text('Total to Pay', style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold)),
               Text(
-                '₹${widget.finalPrice}',
+                '₹$_displayTotal',
                 style: const TextStyle(color: Color(0xFFF2693F), fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
@@ -711,7 +725,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
               )
             else
               Text(
-                'Pay ₹${widget.finalPrice}',
+                'Pay ₹$_displayTotal',
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             const Spacer(),

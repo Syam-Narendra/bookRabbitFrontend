@@ -15,7 +15,7 @@ class SetupProfileScreen extends StatefulWidget {
 }
 
 class _SetupProfileScreenState extends State<SetupProfileScreen> {
-  bool _acceptTerms = true;
+  bool _acceptTerms = false;
   bool _isSubmitting = false;
   File? _imageFile;
   final TextEditingController _nameController = TextEditingController();
@@ -161,6 +161,15 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text("Please enter your first name."),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+                          if (!_acceptTerms) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Please accept the Privacy Policy and Terms and Conditions."),
                                 backgroundColor: Colors.redAccent,
                               ),
                             );

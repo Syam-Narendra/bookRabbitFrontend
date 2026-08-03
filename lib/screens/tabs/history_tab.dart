@@ -46,11 +46,13 @@ class _HistoryTabState extends State<HistoryTab>
   }
 
   Future<void> _fetchBookings() async {
-    setState(() { _isLoading = true; _hasError = false; });
+    if (mounted) setState(() { _isLoading = true; _hasError = false; });
     try {
       final bookings = await BookingService.fetchMyBookings();
+      if (!mounted) return;
       setState(() { _bookings = bookings; _isLoading = false; });
     } catch (_) {
+      if (!mounted) return;
       setState(() { _hasError = true; _isLoading = false; });
     }
   }
@@ -84,7 +86,8 @@ class _HistoryTabState extends State<HistoryTab>
                 padding: EdgeInsets.fromLTRB(hPad, 10, hPad, 0),
                 child: Row(
                   children: [
-                    _backButton(),
+                    // Spacer matching the avatar width so title stays centered
+                    const SizedBox(width: 38),
                     Expanded(
                       child: Text(
                         'My Bookings',
@@ -226,7 +229,7 @@ class _HistoryTabState extends State<HistoryTab>
         ? '${durH.toInt()} hrs'
         : '${durH.toStringAsFixed(1)} hrs';
 
-    final bookedOn = (b['bookedOn'] as String?) ?? (b['date'] as String?) ?? '';
+    final bookedOn = (b['bookedOn'] as String?) ?? '';
 
     final borderCol    = isDark ? const Color(0xFF3A3A3C) : const Color(0xFFEFEFEF);
     final boxBgColor   = isDark ? const Color(0xFF2A2422) : _kPeachBg;
@@ -338,7 +341,7 @@ class _HistoryTabState extends State<HistoryTab>
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
-                                'Booked on $bookedOn',
+                                bookedOn.isNotEmpty ? 'Booked on $bookedOn' : 'Booking date unavailable',
                                 style: TextStyle(
                                   color: context.isDark ? const Color(0xFF98989E) : const Color(0xFF6E6E73),
                                   fontSize: 12.5,
@@ -534,20 +537,6 @@ class _HistoryTabState extends State<HistoryTab>
   }
 
   // ─── HEADER WIDGETS ────────────────────────────────────────────────────────
-  Widget _backButton() => TouchableOpacity(
-        onTap: () => Navigator.maybePop(context),
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _kOrange.withValues(alpha: 0.1),
-          ),
-          child: const Icon(Icons.chevron_left_rounded,
-              color: _kOrange, size: 24),
-        ),
-      );
-
   Widget _profileAvatar() {
     final photoUrl = AuthService.currentUser?.profileImageUrl;
     final name = AuthService.currentUser?.fullName ?? '';
