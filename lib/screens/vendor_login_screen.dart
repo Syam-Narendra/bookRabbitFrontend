@@ -332,6 +332,31 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        Center(
+          child: InkWell(
+            onTap: () => Navigator.pushNamed(context, '/vendor_register'),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(fontSize: 13, color: context.subTextColor),
+                  children: [
+                    const TextSpan(text: 'New ground owner? '),
+                    TextSpan(
+                      text: 'Register Ground',
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
         const SizedBox(height: 12),
       ],
     );

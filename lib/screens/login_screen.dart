@@ -344,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: TouchableOpacity(
-                onTap: () => Navigator.pushReplacementNamed(context, '/vendor_login'),
+                onTap: () => Navigator.pushNamed(context, '/vendor_register'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
                   decoration: BoxDecoration(

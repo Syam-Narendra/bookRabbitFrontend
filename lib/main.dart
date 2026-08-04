@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/vendor_login_screen.dart';
+import 'screens/vendor_register_screen.dart';
 import 'screens/vendor/vendor_dashboard_screen.dart';
 import 'screens/setup_profile_screen.dart';
 import 'screens/home_screen.dart';
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
                 ? const HomeScreen()
                 : const LoginScreen(),
             '/vendor_login': (context) => const VendorLoginScreen(),
+            '/vendor_register': (context) => const VendorRegisterScreen(),
             '/vendor_dashboard': (context) => VendorAuthService.currentOwner != null
                 ? const VendorDashboardScreen()
                 : const VendorLoginScreen(),
