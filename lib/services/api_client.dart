@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
+import 'http_client_factory.dart';
 import 'platform_storage.dart';
 
 class ApiException implements Exception {
@@ -59,7 +61,13 @@ class ApiClient {
 
   // --- Admin/vendor session (cookie-based, fully separate from the bearer
   // token above — the backend's admin API issues a Set-Cookie session, not a
-  // bearer token). ---
+  // bearer token). On native the cookie is captured manually and re-sent as a
+  // Cookie header; on web the browser manages it transparently (JS cannot read
+  // Set-Cookie or set the Cookie header), so withCredentials must be enabled.
+  static http.Client? _platformClient;
+
+  static http.Client get _client => _platformClient ??= createPlatformHttpClient();
+
   static String? _adminCookie;
 
   static Future<void> loadAdminCookie() async {
@@ -83,7 +91,9 @@ class ApiClient {
 
   static Map<String, String> get _adminHeaders => {
         'Content-Type': 'application/json',
-        'Cookie': ?_adminCookie,
+        // The browser owns the cookie on web (withCredentials=true) and
+        // forbids setting the Cookie header from JS — only send it on native.
+        if (!kIsWeb && _adminCookie != null) 'Cookie': _adminCookie!,
       };
 
   /// Captures the `name=value` part of a `Set-Cookie` response header (if
@@ -96,14 +106,14 @@ class ApiClient {
   }
 
   static Future<dynamic> adminGet(String path) async {
-    final response = await _send(() =>
-        http.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _adminHeaders));
+    final response = await _send(
+        () => _client.get(Uri.parse('${AppConstants.apiBaseUrl}$path'), headers: _adminHeaders));
     await _captureAdminCookie(response);
     return _decode(response);
   }
 
   static Future<dynamic> adminPost(String path, {Map<String, dynamic>? body}) async {
-    final response = await _send(() => http.post(
+    final response = await _send(() => _client.post(
           Uri.parse('${AppConstants.apiBaseUrl}$path'),
           headers: _adminHeaders,
           body: body != null ? json.encode(body) : null,
@@ -113,7 +123,7 @@ class ApiClient {
   }
 
   static Future<dynamic> adminPatch(String path, {Map<String, dynamic>? body}) async {
-    final response = await _send(() => http.patch(
+    final response = await _send(() => _client.patch(
           Uri.parse('${AppConstants.apiBaseUrl}$path'),
           headers: _adminHeaders,
           body: body != null ? json.encode(body) : null,
@@ -126,7 +136,7 @@ class ApiClient {
     final request = http.Request('DELETE', Uri.parse('${AppConstants.apiBaseUrl}$path'));
     request.headers.addAll(_adminHeaders);
     if (body != null) request.body = json.encode(body);
-    final streamed = await _send(() => request.send().then(http.Response.fromStream));
+    final streamed = await _send(() => _client.send(request).then(http.Response.fromStream));
     await _captureAdminCookie(streamed);
     return _decode(streamed);
   }
@@ -158,7 +168,7 @@ class ApiClient {
     );
     fields?.forEach((k, v) => request.fields[k] = v);
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await _send(() => http.Response.fromStream(streamedResponse));
     await _captureAdminCookie(response);
     return _decode(response);
@@ -176,7 +186,7 @@ class ApiClient {
     fields.forEach((k, v) => request.fields[k] = v);
     if (files != null) request.files.addAll(files);
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await _send(() => http.Response.fromStream(streamedResponse));
     await _captureAdminCookie(response);
     return _decode(response);

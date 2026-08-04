@@ -2,9 +2,12 @@ class AppConstants {
   // Base URL for backend API.
   // Override at build/run time with --dart-define=API_BASE_URL=https://api.bookrabbit.com
   // so release builds don't ship pointed at localhost.
+  // Default is http://localhost:8000 (not 127.0.0.1) so the Flutter web app
+  // and the API share the same site — required for the browser to send the
+  // vendor session cookie (SameSite=Lax) on cross-origin XHR during local dev.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: 'http://localhost:8000',
   );
 
   // Razorpay key.
