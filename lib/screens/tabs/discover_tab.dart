@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:math' show asin, cos, pi, sin, sqrt;
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../router/route_extensions.dart';
 import 'package:http/http.dart' as http;
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
-import '../ground_details_screen.dart';
 import '../../services/ground_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -1117,11 +1117,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
       BuildContext context, Map<String, dynamic> ground) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => GroundDetailsScreen(ground: ground),
-          ),
+        context.goGroundDetails(
+          ground['id']?.toString() ?? '',
+          ground: ground,
         );
       },
       child: Column(

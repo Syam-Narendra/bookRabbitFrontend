@@ -1,90 +1,31 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../router/route_extensions.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
-import 'tabs/discover_tab.dart';
-import 'tabs/history_tab.dart';
-import 'tabs/account_tab.dart';
 
-class HomeScreen extends StatefulWidget {
-  final int initialIndex;
-  const HomeScreen({super.key, this.initialIndex = 0});
+/// Permanent Shell Layout for Book Rabbit.
+///
+/// Houses the [StatefulNavigationShell] body alongside the fixed, persistent
+/// navigation shell (BottomNavigationBar on mobile, NavigationRail on wide desktop/tablet screens).
+///
+/// Key properties:
+/// 1. The navigation bar/rail never rebuilds when navigating between branches or child pages.
+/// 2. Only the child view ([navigationShell]) rebuilds during tab transitions.
+/// 3. Tab selection triggers [StatefulNavigationShell.goBranch].
+class MainLayout extends StatelessWidget {
+  final StatefulNavigationShell navigationShell;
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  late int _currentIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentIndex = widget.initialIndex;
-  }
-
-  @override
-  void didUpdateWidget(HomeScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialIndex != oldWidget.initialIndex) {
-      setState(() {
-        _currentIndex = widget.initialIndex;
-      });
-    }
-  }
+  const MainLayout({
+    super.key,
+    required this.navigationShell,
+  });
 
   void _onTabSelected(int index) {
-    if (_currentIndex == index) return;
-    setState(() => _currentIndex = index);
-    switch (index) {
-      case 0:
-        context.goHome();
-        break;
-      case 1:
-        context.goHistory();
-        break;
-      case 2:
-        context.goAccount();
-        break;
-    }
-  }
-
-  Widget _buildTabContent() {
-    Widget tabWidget;
-    switch (_currentIndex) {
-      case 0:
-        tabWidget = DiscoverTab(
-          key: const ValueKey('tab_discover'),
-          onProfileTapped: () => _onTabSelected(2),
-        );
-        break;
-      case 1:
-        tabWidget = HistoryTab(
-          key: const ValueKey('tab_history'),
-          onProfileTapped: () => _onTabSelected(2),
-        );
-        break;
-      default:
-        tabWidget = const AccountTab(key: ValueKey('tab_account'));
-    }
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.02),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-            child: child,
-          ),
-        );
-      },
-      child: tabWidget,
+    // Switch to the target branch.
+    // If tapping the already-active tab, initialLocation: true pops to the root of that branch.
+    navigationShell.goBranch(
+      index,
+      initialLocation: index == navigationShell.currentIndex,
     );
   }
 
@@ -92,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 720;
     final bgColor = context.bgColor;
+    final currentIndex = navigationShell.currentIndex;
 
     final Widget scaffold = isWide
         ? Scaffold(
@@ -100,18 +42,31 @@ class _HomeScreenState extends State<HomeScreen> {
               color: bgColor,
               child: Row(
                 children: [
-                  // Side navigation rail matching current theme
+                  // Side navigation rail matching theme
                   NavigationRail(
                     backgroundColor: bgColor,
                     useIndicator: false,
                     indicatorColor: Colors.transparent,
-                    selectedIndex: _currentIndex,
+                    selectedIndex: currentIndex,
                     onDestinationSelected: _onTabSelected,
                     labelType: NavigationRailLabelType.all,
-                    selectedIconTheme: const IconThemeData(color: Color(0xFFE54F3F), size: 26),
-                    unselectedIconTheme: IconThemeData(color: context.subTextColor, size: 24),
-                    selectedLabelTextStyle: const TextStyle(color: Color(0xFFE54F3F), fontWeight: FontWeight.bold, fontSize: 12),
-                    unselectedLabelTextStyle: TextStyle(color: context.subTextColor, fontSize: 12),
+                    selectedIconTheme: const IconThemeData(
+                      color: Color(0xFFE54F3F),
+                      size: 26,
+                    ),
+                    unselectedIconTheme: IconThemeData(
+                      color: context.subTextColor,
+                      size: 24,
+                    ),
+                    selectedLabelTextStyle: const TextStyle(
+                      color: Color(0xFFE54F3F),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                    unselectedLabelTextStyle: TextStyle(
+                      color: context.subTextColor,
+                      fontSize: 12,
+                    ),
                     destinations: const [
                       NavigationRailDestination(
                         icon: Icon(Icons.book_outlined),
@@ -131,10 +86,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   VerticalDivider(width: 1, color: context.borderColor),
-                  // Main content
+                  // Persistent Branch Body
                   Expanded(
                     child: SafeArea(
-                      child: _buildTabContent(),
+                      child: navigationShell,
                     ),
                   ),
                 ],
@@ -148,10 +103,14 @@ class _HomeScreenState extends State<HomeScreen> {
               color: bgColor,
               child: Stack(
                 children: [
-                  _buildTabContent(),
+                  // Persistent Branch Body
+                  navigationShell,
+                  // Floating Glassmorphic Bottom Navigation Bar
                   Positioned(
-                    left: 0, right: 0, bottom: 0,
-                    child: _buildBottomOverlay(),
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _buildBottomOverlay(context, currentIndex),
                   ),
                 ],
               ),
@@ -159,10 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
           );
 
     return PopScope(
-      canPop: _currentIndex == 0,
+      canPop: currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (_currentIndex != 0) {
+        if (currentIndex != 0) {
           _onTabSelected(0);
         }
       },
@@ -170,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomOverlay() {
+  Widget _buildBottomOverlay(BuildContext context, int currentIndex) {
     final overlayColor = context.bgColor;
     return ClipRect(
       child: BackdropFilter(
@@ -192,34 +151,50 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Theme(
-                data: ThemeData(splashColor: Colors.transparent, highlightColor: Colors.transparent),
+                data: ThemeData(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                ),
                 child: BottomNavigationBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                   selectedItemColor: const Color(0xFFE54F3F),
                   unselectedItemColor: context.subTextColor,
-                  currentIndex: _currentIndex,
+                  currentIndex: currentIndex,
                   onTap: _onTabSelected,
                   type: BottomNavigationBarType.fixed,
                   selectedFontSize: 12,
                   unselectedFontSize: 12,
                   items: const [
                     BottomNavigationBarItem(
-                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.book_outlined)),
+                      icon: Padding(
+                        padding: EdgeInsets.only(bottom: 4),
+                        child: Icon(Icons.book_outlined),
+                      ),
                       label: 'Discover',
                     ),
                     BottomNavigationBarItem(
-                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.history)),
+                      icon: Padding(
+                        padding: EdgeInsets.only(bottom: 4),
+                        child: Icon(Icons.history),
+                      ),
                       label: 'History',
                     ),
                     BottomNavigationBarItem(
-                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.person_outline)),
+                      icon: Padding(
+                        padding: EdgeInsets.only(bottom: 4),
+                        child: Icon(Icons.person_outline),
+                      ),
                       label: 'Account',
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom : 6.0),
+              SizedBox(
+                height: MediaQuery.of(context).padding.bottom > 0
+                    ? MediaQuery.of(context).padding.bottom
+                    : 6.0,
+              ),
             ],
           ),
         ),
@@ -227,4 +202,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-

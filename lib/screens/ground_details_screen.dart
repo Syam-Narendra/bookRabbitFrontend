@@ -1,25 +1,39 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../router/route_extensions.dart';
 import 'package:intl/intl.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../services/ground_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import 'package:go_router/go_router.dart';
 import 'review_booking_screen.dart';
-import 'login_screen.dart';
 
 class GroundDetailsScreen extends StatefulWidget {
+  final String? groundId;
   final Map<String, dynamic> ground;
   final VoidCallback? onBackPressed;
 
-  const GroundDetailsScreen({super.key, required this.ground, this.onBackPressed});
+  const GroundDetailsScreen({
+    super.key,
+    this.groundId,
+    this.ground = const {},
+    this.onBackPressed,
+  });
 
   @override
   State<GroundDetailsScreen> createState() => _GroundDetailsScreenState();
 }
 
 class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
+  Map<String, dynamic>? _fetchedGround;
+  bool _isFetchingGround = false;
+
+  Map<String, dynamic> get ground =>
+      (_fetchedGround != null && _fetchedGround!.isNotEmpty)
+          ? _fetchedGround!
+          : widget.ground;
   final List<String> _timeSlots = [];
   final List<String> _timeSlots24 = [];
   String? _selectedStartTime;
@@ -39,6 +53,37 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
+    if (widget.ground.isEmpty && widget.groundId != null) {
+      _loadGroundById(widget.groundId!);
+    } else {
+      _initGroundData();
+    }
+  }
+
+  Future<void> _loadGroundById(String id) async {
+    setState(() => _isFetchingGround = true);
+    try {
+      final grounds = await GroundService.fetchGrounds();
+      final match = grounds.firstWhere(
+        (g) => g['id']?.toString() == id,
+        orElse: () => const {},
+      );
+      if (!mounted) return;
+      if (match.isNotEmpty) {
+        setState(() {
+          _fetchedGround = match;
+          _isFetchingGround = false;
+        });
+        _initGroundData();
+      } else {
+        setState(() => _isFetchingGround = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isFetchingGround = false);
+    }
+  }
+
+  void _initGroundData() {
     _generateTimeSlots();
     _parsePrice();
     _fetchAvailability();
@@ -61,7 +106,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   void _parsePrice() {
     // Read price_per_hour directly as a number to avoid string-parsing bugs.
-    final raw = widget.ground['price_per_hour'];
+    final raw = ground['price_per_hour'];
     if (raw != null) {
       _basePrice = (raw as num).round();
     }
@@ -73,7 +118,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     setState(() => _isLoadingAvailability = true);
     try {
       final availability = await GroundService.fetchSlotAvailability(
-        groundId: widget.ground['id']?.toString() ?? '',
+        groundId: ground['id']?.toString() ?? '',
         date: dateStr,
       );
       if (!mounted) return;
@@ -94,7 +139,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
       try {
         final availability = await GroundService.fetchSlotAvailability(
-          groundId: widget.ground['id']?.toString() ?? '',
+          groundId: ground['id']?.toString() ?? '',
           date: dateStr,
         );
         if (!mounted) return;
@@ -107,8 +152,8 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     _timeSlots.clear();
     _timeSlots24.clear();
 
-    String openTimeStr = widget.ground['open_time']?.toString() ?? '10:00';
-    String closeTimeStr = widget.ground['close_time']?.toString() ?? '20:00';
+    String openTimeStr = ground['open_time']?.toString() ?? '10:00';
+    String closeTimeStr = ground['close_time']?.toString() ?? '20:00';
     
     int startHour = 10;
     int startMin = 0;
@@ -222,20 +267,17 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   void _handleBack() {
     if (widget.onBackPressed != null) {
       widget.onBackPressed!();
-    } else if (Navigator.canPop(context)) {
-      Navigator.pop(context);
+    } else if (context.canPop()) {
+      context.pop();
     } else {
-      Navigator.maybePop(context);
+      context.goHome();
     }
   }
 
   Future<void> _proceedToReview() async {
     if (_selectedStartTime == null || _selectedDate == null) return;
     if (AuthService.currentUser == null) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+      context.goUserLogin();
       return;
     }
 
@@ -247,7 +289,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ReviewBookingScreen(
-          ground: widget.ground,
+          ground: ground,
           date: _selectedDate!,
           startTime: _selectedStartTime!,
           endTime: _calculateEndTime(_selectedStartTime!, _durationMins),
@@ -524,6 +566,12 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isFetchingGround) {
+      return Scaffold(
+        backgroundColor: context.bgColor,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: context.bgColor,
       body: SafeArea(
@@ -551,7 +599,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  widget.ground['title'] ?? 'Ground Details',
+                                  ground['title'] ?? 'Ground Details',
                                   style: TextStyle(color: context.textColor, fontSize: 20, fontWeight: FontWeight.bold),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -666,7 +714,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   }
 
   Widget _buildImageWidget({required double height}) {
-    final images = widget.ground['images'] as List<dynamic>? ?? [];
+    final images = ground['images'] as List<dynamic>? ?? [];
     if (images.isNotEmpty) {
       return CarouselSlider(
         options: CarouselOptions(
@@ -686,7 +734,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       );
     }
 
-    final imageUrl = widget.ground['imageUrl'] as String? ?? '';
+    final imageUrl = ground['imageUrl'] as String? ?? '';
     final fallback = 'assets/images/sports_bunnies.png';
 
     if (imageUrl.isEmpty) {
@@ -731,7 +779,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           children: [
             Expanded(
               child: Text(
-                widget.ground['title'] ?? 'Sports Ground',
+                ground['title'] ?? 'Sports Ground',
                 style: TextStyle(color: context.textColor, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
               ),
             ),
@@ -747,7 +795,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   const Icon(Icons.sports_soccer, color: Color(0xFFFF7A2F), size: 14),
                   const SizedBox(width: 4),
                   Text(
-                    widget.ground['type'] ?? 'Sports',
+                    ground['type'] ?? 'Sports',
                     style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -762,7 +810,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                widget.ground['location'] ?? 'Hyderabad, Telangana',
+                ground['location'] ?? 'Hyderabad, Telangana',
                 style: TextStyle(color: context.subTextColor, fontSize: 14),
               ),
             ),

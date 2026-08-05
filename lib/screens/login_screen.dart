@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../router/route_extensions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
@@ -311,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Expanded(
               child: TouchableOpacity(
-                onTap: () => Navigator.pushReplacementNamed(context, '/vendor_login'),
+                onTap: () => context.goVendorLogin(),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
                   decoration: BoxDecoration(
@@ -344,7 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: TouchableOpacity(
-                onTap: () => Navigator.pushNamed(context, '/vendor_register'),
+                onTap: () => context.goRegisterGround(),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
                   decoration: BoxDecoration(
@@ -387,7 +388,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(color: context.subTextColor, fontSize: 12, fontWeight: FontWeight.w500),
               ),
               InkWell(
-                onTap: () => Navigator.pushNamed(context, '/terms'),
+                onTap: () => context.goTerms(),
                 child: const Text(
                   'Terms & Conditions',
                   style: TextStyle(color: Color(0xFFFF7A2F), fontSize: 12, fontWeight: FontWeight.w600),
@@ -398,7 +399,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(color: context.subTextColor, fontSize: 12, fontWeight: FontWeight.w500),
               ),
               InkWell(
-                onTap: () => Navigator.pushNamed(context, '/terms'),
+                onTap: () => context.goTerms(),
                 child: const Text(
                   'Privacy Policy',
                   style: TextStyle(color: Color(0xFFFF7A2F), fontSize: 12, fontWeight: FontWeight.w600),

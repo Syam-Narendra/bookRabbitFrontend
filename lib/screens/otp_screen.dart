@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
+import '../router/route_extensions.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
@@ -148,9 +149,9 @@ class _OtpScreenState extends State<OtpScreen> {
       final user = await AuthService.verifyOtp(widget.phone, otp);
       if (!mounted) return;
       if (user.fullName == null || user.fullName!.trim().isEmpty) {
-        Navigator.pushNamedAndRemoveUntil(context, '/setup_profile', (route) => false);
+        context.goSetupProfile();
       } else {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        context.goHome();
       }
     } on ApiException catch (e) {
       if (!mounted) return;

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
+import '../router/route_extensions.dart';
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
@@ -134,7 +136,13 @@ class _SupportScreenState extends State<SupportScreen> {
                                   Row(
                                     children: [
                                       GestureDetector(
-                                        onTap: () => Navigator.pop(context),
+                                        onTap: () {
+                                          if (context.canPop()) {
+                                            context.pop();
+                                          } else {
+                                            context.goAccount();
+                                          }
+                                        },
                                         child: Container(
                                           width: 36,
                                           height: 36,

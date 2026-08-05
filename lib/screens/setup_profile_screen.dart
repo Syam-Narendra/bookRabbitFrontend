@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../router/route_extensions.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
@@ -179,7 +180,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                           try {
                             await AuthService.updateName(_nameController.text.trim());
                             if (!context.mounted) return;
-                            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                            context.goHome();
                           } on ApiException catch (e) {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(

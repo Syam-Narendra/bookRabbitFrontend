@@ -1,17 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../constants.dart';
-import '../services/auth_service.dart';
+import '../router/route_extensions.dart';
 import '../services/api_client.dart';
+import '../services/auth_service.dart';
 import '../services/booking_service.dart';
 import '../services/razorpay_web/razorpay_web_helper.dart';
 import '../theme/app_theme.dart';
 import '../widgets/touchable_opacity.dart';
 import 'booking_success_screen.dart';
-
 
 class ReviewBookingScreen extends StatefulWidget {
   final Map<String, dynamic> ground;
@@ -45,8 +46,6 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
   bool _isVerifyingPayment = false;
   BookingOrder? _order;
 
-  /// Display the server-computed breakdown once the order is created, so the
-  /// shown price always matches the actual charge.
   int get _displayFare => _order?.baseAmount.round() ?? widget.fare;
   int get _displayFee => _order?.platformFee.round() ?? widget.platformFee;
   int get _displayTotal => _order?.totalAmount.round() ?? widget.finalPrice;
@@ -99,9 +98,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
         'amount': (order.totalAmount * 100).round(),
         'name': 'Book Rabbit',
         'description': '${widget.ground['title']} Booking',
-        'prefill': {
-          'contact': AuthService.currentUser?.phoneNumber ?? '',
-        },
+        'prefill': {'contact': AuthService.currentUser?.phoneNumber ?? ''},
         'theme': {'color': '#FF7A2F'},
       };
 
@@ -120,7 +117,13 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       setState(() => _isCreatingOrder = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          content: Text(
+            e.message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           backgroundColor: const Color(0xFFD32F2F),
         ),
       );
@@ -137,7 +140,10 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
   }
 
   Future<void> _handleWebPaymentSuccess(
-      String paymentId, String orderId, String signature) async {
+    String paymentId,
+    String orderId,
+    String signature,
+  ) async {
     setState(() => _isVerifyingPayment = true);
     try {
       final referenceId = await BookingService.verifyPayment(
@@ -166,7 +172,13 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       setState(() => _isVerifyingPayment = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          content: Text(
+            e.message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           backgroundColor: const Color(0xFFD32F2F),
         ),
       );
@@ -195,7 +207,13 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Payment Failed: $message', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        content: Text(
+          'Payment Failed: $message',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: const Color(0xFFD32F2F),
       ),
     );
@@ -230,7 +248,13 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       setState(() => _isVerifyingPayment = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          content: Text(
+            e.message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           backgroundColor: const Color(0xFFD32F2F),
         ),
       );
@@ -259,7 +283,13 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Payment Failed: ${response.message}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        content: Text(
+          'Payment Failed: ${response.message}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: const Color(0xFFD32F2F),
       ),
     );
@@ -267,8 +297,19 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
 
   void _handleExternalWallet(ExternalWalletResponse response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('External Wallet Selected: ${response.walletName}'), backgroundColor: Colors.blue),
+      SnackBar(
+        content: Text('External Wallet Selected: ${response.walletName}'),
+        backgroundColor: Colors.blue,
+      ),
     );
+  }
+
+  void _navigateBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.goHome();
+    }
   }
 
   @override
@@ -277,140 +318,907 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
 
     return Scaffold(
       backgroundColor: context.bgColor,
-      body: Stack(
-        children: [
-          if (!_isVerifyingPayment)
-            SingleChildScrollView(
-              child: Align(
-                alignment: Alignment.topCenter,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 840;
+
+          if (isWide) {
+            // ── Wide Desktop / Laptop Layout matching the mockup ──────────────
+            return Stack(
+              children: [
+                if (!_isVerifyingPayment)
+                  SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // Top Web Navbar
+                        _buildWebNavbar(context),
+
+                        // Hero Header Section
+                        _buildWebHeroHeader(context),
+
+                        const SizedBox(height: 24),
+
+                        // Main Content Container
+                        Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 1140),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              children: [
+                                IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      // ── Left Column (60%): Main Arena Card ──
+                                      Expanded(
+                                        flex: 6,
+                                        child: _buildWebGroundCard()
+                                            .animate()
+                                            .fade(delay: 100.ms)
+                                            .slideY(begin: 0.05),
+                                      ),
+
+                                      const SizedBox(width: 24),
+
+                                      // ── Right Column (40%): Payment Card ──
+                                      Expanded(
+                                        flex: 4,
+                                        child: _buildWebPaymentCard(isWide: true)
+                                            .animate()
+                                            .fade(delay: 200.ms)
+                                            .slideY(begin: 0.05),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: 32),
+
+                                // Bottom Trust Banner
+                                _buildTrustBanner().animate().fade(
+                                  delay: 300.ms,
+                                ),
+
+                                const SizedBox(height: 40),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (_isVerifyingPayment)
+                  Positioned.fill(child: _buildProcessingOverlay()),
+              ],
+            );
+          }
+
+          // ── Mobile / Narrow Layout ─────────────────────────────────────────
+          return Stack(
+            children: [
+              if (!_isVerifyingPayment)
+                SingleChildScrollView(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Column(
+                        children: [
+                          _buildMobileHeaderBanner(context, topInset),
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: _buildMobileSummaryCard()
+                                .animate()
+                                .fade(delay: 100.ms)
+                                .slideY(begin: 0.1),
+                          ),
+
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: _buildWebPaymentCard(isWide: false)
+                                .animate()
+                                .fade(delay: 200.ms)
+                                .slideY(begin: 0.1),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              if (_isVerifyingPayment)
+                Positioned.fill(child: _buildProcessingOverlay()),
+            ],
+          );
+        },
+      ),
+      bottomNavigationBar: null,
+    );
+  }
+
+  // ── Web Navigation Header Bar ──────────────────────────────────────────────
+  Widget _buildWebNavbar(BuildContext context) {
+    final userName = AuthService.currentUser?.fullName ?? 'User Account';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        border: Border(bottom: BorderSide(color: context.borderColor)),
+      ),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1140),
+          child: Row(
+            children: [
+              // Logo
+              InkWell(
+                onTap: () => context.goHome(),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/images/footer_logo.png',
+                      height: 32,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.sports_soccer,
+                        color: Color(0xFFFF5200),
+                        size: 30,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    RichText(
+                      text: const TextSpan(
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: 'Book',
+                            style: TextStyle(color: Color(0xFF1E1E1E)),
+                          ),
+                          TextSpan(
+                            text: 'Rabbit',
+                            style: TextStyle(color: Color(0xFFFF5200)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 48),
+
+              const Spacer(),
+
+              // Location Chip
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: context.subCardBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: context.borderColor),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
+                      color: Color(0xFFFF5200),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Hyderabad',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: context.textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16,
+                      color: context.subTextColor,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // User Profile Chip
+              InkWell(
+                onTap: () => context.goAccount(),
+                borderRadius: BorderRadius.circular(24),
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Column(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.subCardBg,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: context.borderColor),
+                  ),
+                  child: Row(
                     children: [
-                      // 1. Top Header Banner
-                      _buildHeaderBanner(context, topInset),
-
-                      const SizedBox(height: 16),
-
-                      // 2. Summary Card
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _buildSummaryCard().animate().fade(delay: 100.ms).slideY(begin: 0.1),
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: const Color(
+                          0xFFFF5200,
+                        ).withValues(alpha: 0.15),
+                        backgroundImage:
+                            AuthService.currentUser?.profileImageUrl != null
+                            ? NetworkImage(
+                                AuthService.currentUser!.profileImageUrl!,
+                              )
+                            : null,
+                        child: AuthService.currentUser?.profileImageUrl == null
+                            ? const Icon(
+                                Icons.person,
+                                size: 16,
+                                color: Color(0xFFFF5200),
+                              )
+                            : null,
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // 3. Payment Details Card
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _buildPaymentCard().animate().fade(delay: 200.ms).slideY(begin: 0.1),
+                      const SizedBox(width: 8),
+                      Text(
+                        userName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: context.textColor,
+                        ),
                       ),
-
-                      const SizedBox(height: 24),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: context.subTextColor,
+                      ),
                     ],
                   ),
                 ),
               ),
-            ),
-
-          // Full-screen Payment Processing Overlay
-          if (_isVerifyingPayment)
-            Positioned.fill(
-              child: _buildProcessingOverlay(),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
-      bottomNavigationBar: _isVerifyingPayment
-          ? null
-          : Container(
-              color: context.bgColor,
-              padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 16),
-              child: SafeArea(
-                top: false,
+    );
+  }
+
+  // ── Web Hero Banner Header Section ─────────────────────────────────────────
+  Widget _buildWebHeroHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: context.isDark
+              ? [const Color(0xFF2C1C16), const Color(0xFF1E1410)]
+              : [const Color(0xFFFFF7F2), const Color(0xFFFFEAE0)],
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1140),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Circular Back Button
+              InkWell(
+                onTap: _navigateBack,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: context.cardBg,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.arrow_back,
+                    size: 20,
+                    color: context.textColor,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 20),
+
+              // Title and Description
+              Expanded(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Your payment is secure and encrypted text
-                    _buildEncryptedFooter().animate().fade(delay: 300.ms),
-                    const SizedBox(height: 10),
-
-                    // 2. Pay button
-                    _buildPayButton().animate().fade(delay: 400.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 10),
-
-                    // 3. Secured by Razorpay text
-                    _buildSecuredBadge().animate().fade(delay: 500.ms),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5200).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Review Booking',
+                        style: TextStyle(
+                          color: Color(0xFFFF5200),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Booking Summary',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: context.textColor,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Review your booking details before you proceed to pay.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: context.subTextColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
+
+              // Rabbit Mascot Artwork Right Side
+              Image.asset(
+                'assets/images/vendor-login-rabbit.png',
+                height: 140,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const SizedBox(),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildProcessingOverlay() {
+  // ── Web Main Ground Arena Card ─────────────────────────────────────────────
+  Widget _buildWebGroundCard() {
+    final title = widget.ground['title'] as String? ?? 'Sports Ground';
+    final location =
+        (widget.ground['address'] ??
+                widget.ground['location'] ??
+                'Madhapur, Hyderabad')
+            .toString();
+    final sportTag =
+        (widget.ground['category'] ??
+                widget.ground['type'] ??
+                widget.ground['tag'] ??
+                'Cricket')
+            .toString();
+    final imageUrl =
+        (widget.ground['imageUrl'] ??
+                (widget.ground['images'] as List?)?.first ??
+                'assets/images/sports_bunnies.png')
+            .toString();
+
     return Container(
-      color: Colors.black.withValues(alpha: 0.7),
-      width: double.infinity,
-      height: double.infinity,
-      alignment: Alignment.center,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 32),
-        padding: const EdgeInsets.all(28),
-        constraints: const BoxConstraints(maxWidth: 360),
-        decoration: BoxDecoration(
-          color: context.cardBg,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: context.isDark ? 0.3 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image with "Upcoming" Badge Overlay
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  children: [
+                    imageUrl.startsWith('http')
+                        ? Image.network(
+                            imageUrl,
+                            width: 200,
+                            height: 125,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  width: 200,
+                                  height: 125,
+                                  color: context.subCardBg,
+                                  child: const Icon(
+                                    Icons.sports_cricket,
+                                    size: 40,
+                                  ),
+                                ),
+                          )
+                        : Image.asset(
+                            imageUrl,
+                            width: 200,
+                            height: 125,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  width: 200,
+                                  height: 125,
+                                  color: context.subCardBg,
+                                  child: const Icon(
+                                    Icons.sports_cricket,
+                                    size: 40,
+                                  ),
+                                ),
+                          ),
+                    Positioned(
+                      left: 10,
+                      top: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF5200),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Upcoming',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 20),
+
+              // Title & Location Meta Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: context.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                          color: Color(0xFFFF5200),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            location,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: context.subTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.navigation_outlined,
+                          size: 16,
+                          color: Color(0xFFFF5200),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '2.3 km away',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.subTextColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.sports_cricket_outlined,
+                          size: 16,
+                          color: Color(0xFFFF5200),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          sportTag,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.subTextColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Bottom Info Strip (Date, Time, Duration)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: context.subCardBg,
+              borderRadius: BorderRadius.circular(14),
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_month_outlined,
+                        color: Color(0xFFFF5200),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Date',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: context.subTextColor,
+                              ),
+                            ),
+                            Text(
+                              DateFormat(
+                                'EEE, MMM d, yyyy',
+                              ).format(widget.date),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: context.textColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(height: 28, width: 1, color: context.borderColor),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          color: Color(0xFFFF5200),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Time',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: context.subTextColor,
+                                ),
+                              ),
+                              Text(
+                                '${widget.startTime} – ${widget.endTime}',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: context.textColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Container(height: 28, width: 1, color: context.borderColor),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          color: Color(0xFFFF5200),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Duration',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: context.subTextColor,
+                                ),
+                              ),
+                              Text(
+                                widget.durationStr,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: context.textColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Web Payment Details Card ───────────────────────────────────────────────
+  Widget _buildWebPaymentCard({bool isWide = true}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: context.isDark ? 0.3 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        mainAxisAlignment: isWide
+            ? MainAxisAlignment.spaceBetween
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payment Details',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: context.textColor,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ground Fare',
+                style: TextStyle(color: context.subTextColor, fontSize: 14),
+              ),
+              Text(
+                '₹$_displayFare',
+                style: TextStyle(
+                  color: context.textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Platform Fee ',
+                    style: TextStyle(color: context.subTextColor, fontSize: 14),
+                  ),
+                  Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: context.subTextColor,
+                  ),
+                ],
+              ),
+              Text(
+                '₹$_displayFee',
+                style: TextStyle(
+                  color: context.textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          Divider(color: context.borderColor, height: 28),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total to Pay',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: context.textColor,
+                ),
+              ),
+              Text(
+                '₹$_displayTotal',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFFF5200),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _buildSecuredBadge(),
+          const SizedBox(height: 14),
+          _buildPayButton(),
+          const SizedBox(height: 12),
+          _buildEncryptedFooter(),
+        ],
+      ),
+    );
+  }
+
+  // ── Bottom Trust Features Strip Banner ────────────────────────────────────
+  Widget _buildTrustBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.borderColor),
+      ),
+      child: Row(
+        children: [
+          _buildTrustItem(
+            icon: Icons.shield_outlined,
+            title: 'Safe & Secure',
+            subtitle: 'Your payment and data are protected',
+          ),
+          _buildTrustItem(
+            icon: Icons.workspace_premium_outlined,
+            title: 'Instant Confirmation',
+            subtitle: 'Get booking confirmation immediately',
+          ),
+          _buildTrustItem(
+            icon: Icons.calendar_month_outlined,
+            title: '24/7 Support',
+            subtitle: 'We\'re here to help you anytime',
+          ),
+          _buildTrustItem(
+            icon: Icons.verified_outlined,
+            title: 'Trusted by 10,000+ Players',
+            subtitle: 'Join thousands of happy customers',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
           children: [
             Container(
-              width: 72,
-              height: 72,
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2693F).withValues(alpha: 0.1),
+                color: const Color(0xFFFF5200).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const CircularProgressIndicator(
-                strokeWidth: 3.5,
-                color: Color(0xFFF2693F),
-              ),
+              child: Icon(icon, size: 20, color: const Color(0xFFFF5200)),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Payment Processing...',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: context.textColor,
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'We are confirming your payment with Razorpay. Please do not close or refresh this page.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: context.subTextColor,
-                fontSize: 13,
-                height: 1.35,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: context.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 11, color: context.subTextColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ).animate().fade(duration: 250.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
+      ),
     );
   }
 
-  Widget _buildHeaderBanner(BuildContext context, double topInset) {
+  // ── Mobile Header Banner ───────────────────────────────────────────────────
+  Widget _buildMobileHeaderBanner(BuildContext context, double topInset) {
     return Container(
       height: 190 + topInset,
       padding: EdgeInsets.only(top: topInset),
@@ -425,18 +1233,16 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       ),
       child: Stack(
         children: [
-          // Mascot Rabbit Image anchored strictly inside top right of banner
           Positioned(
             right: 0,
             top: 20,
             bottom: 0,
             child: Image.asset(
-              'assets/images/rabbit_support_half.png',
+              'assets/images/vendor-login-rabbit.png',
               fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(),
             ),
           ),
-
-          // App Bar Back Button & Title
           Positioned(
             top: 0,
             left: 4,
@@ -444,8 +1250,12 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: _navigateBack,
                 ),
                 const Expanded(
                   child: Text(
@@ -462,8 +1272,6 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
               ],
             ),
           ),
-
-          // Booking Summary Heading & Subtitle (constrained to left side so NO overlap with rabbit)
           Positioned(
             left: 20,
             top: 42,
@@ -497,7 +1305,14 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     );
   }
 
-  Widget _buildSummaryCard() {
+  Widget _buildMobileSummaryCard() {
+    final title = widget.ground['title'] as String? ?? 'Sports Ground';
+    final location =
+        (widget.ground['address'] ??
+                widget.ground['location'] ??
+                'Madhapur, Hyderabad')
+            .toString();
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -521,10 +1336,14 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                 width: 44,
                 height: 44,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF2693F),
+                  color: Color(0xFFFF5200),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.calendar_today_rounded, color: Colors.white, size: 22),
+                child: const Icon(
+                  Icons.calendar_today_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -532,7 +1351,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.ground['title'],
+                      title,
                       style: TextStyle(
                         color: context.textColor,
                         fontSize: 17,
@@ -541,7 +1360,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${widget.ground['address']?.toString().isNotEmpty == true ? widget.ground['address'] : widget.ground['location']}',
+                      location,
                       style: TextStyle(
                         color: context.subTextColor,
                         fontSize: 12.5,
@@ -558,7 +1377,11 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
           Divider(color: context.borderColor, height: 28),
           Row(
             children: [
-              const Icon(Icons.calendar_month_outlined, color: Color(0xFFF2693F), size: 18),
+              const Icon(
+                Icons.calendar_month_outlined,
+                color: Color(0xFFFF5200),
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -576,7 +1399,11 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.access_time_rounded, color: Color(0xFFF2693F), size: 18),
+              const Icon(
+                Icons.access_time_rounded,
+                color: Color(0xFFFF5200),
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -590,20 +1417,29 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: context.isDark ? const Color(0xFF2C1A14) : const Color(0xFFFFF2EC),
+                  color: context.isDark
+                      ? const Color(0xFF2C1A14)
+                      : const Color(0xFFFFF2EC),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.timer_outlined, color: Color(0xFFF2693F), size: 14),
+                    const Icon(
+                      Icons.timer_outlined,
+                      color: Color(0xFFFF5200),
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       widget.durationStr,
                       style: const TextStyle(
-                        color: Color(0xFFF2693F),
+                        color: Color(0xFFFF5200),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -618,60 +1454,70 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     );
   }
 
-  Widget _buildPaymentCard() {
+  Widget _buildProcessingOverlay() {
     return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.cardBg,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: context.isDark ? 0.3 : 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Payment Details',
-            style: TextStyle(
-              color: context.textColor,
-              fontSize: 16.5,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Ground Fare', style: TextStyle(color: context.subTextColor, fontSize: 14.5)),
-              Text('₹$_displayFare', style: TextStyle(color: context.textColor, fontSize: 14.5, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Platform Fee', style: TextStyle(color: context.subTextColor, fontSize: 14.5)),
-              Text('₹$_displayFee', style: TextStyle(color: context.textColor, fontSize: 14.5, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          Divider(color: context.borderColor, height: 28),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Total to Pay', style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold)),
-              Text(
-                '₹$_displayTotal',
-                style: const TextStyle(color: Color(0xFFF2693F), fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ],
-      ),
+      color: Colors.black.withValues(alpha: 0.7),
+      width: double.infinity,
+      height: double.infinity,
+      alignment: Alignment.center,
+      child:
+          Container(
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                padding: const EdgeInsets.all(28),
+                constraints: const BoxConstraints(maxWidth: 360),
+                decoration: BoxDecoration(
+                  color: context.cardBg,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5200).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 3.5,
+                        color: Color(0xFFFF5200),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Payment Processing...',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.textColor,
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We are confirming your payment with Razorpay. Please do not close or refresh this page.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.subTextColor,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              .animate()
+              .fade(duration: 250.ms)
+              .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
     );
   }
 
@@ -680,7 +1526,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock, size: 13, color: Color(0xFFFF7A2F)),
+          const Icon(Icons.lock, size: 13, color: Color(0xFFFF5200)),
           const SizedBox(width: 4),
           Text(
             'Secured by ',
@@ -688,7 +1534,11 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
           ),
           const Text(
             'Razorpay',
-            style: TextStyle(color: Color(0xFFFF7A2F), fontWeight: FontWeight.bold, fontSize: 12),
+            style: TextStyle(
+              color: Color(0xFFFF5200),
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -700,13 +1550,13 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       onTap: _isCreatingOrder ? null : _startPayment,
       child: Container(
         width: double.infinity,
-        height: 54,
+        height: 52,
         decoration: BoxDecoration(
-          color: const Color(0xFFFF7A2F),
-          borderRadius: BorderRadius.circular(16),
+          color: const Color(0xFFFF5200),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF7A2F).withValues(alpha: 0.35),
+              color: const Color(0xFFFF5200).withValues(alpha: 0.35),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -721,16 +1571,23 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
               const SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
               )
             else
               Text(
                 'Pay ₹$_displayTotal',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             const Spacer(),
             if (!_isCreatingOrder)
-              const Icon(Icons.chevron_right, color: Colors.white, size: 22),
+              const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
           ],
         ),
       ),
@@ -742,7 +1599,11 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFFFF7A2F)),
+          const Icon(
+            Icons.verified_user_rounded,
+            size: 14,
+            color: Color(0xFFFF5200),
+          ),
           const SizedBox(width: 6),
           Text(
             'Your payment is secure and encrypted',

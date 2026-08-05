@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../router/route_extensions.dart';
 import '../../models/vendor_models.dart';
 import '../../services/api_client.dart';
 import '../../services/vendor_auth_service.dart';
@@ -47,7 +48,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     } on AuthException {
       await VendorAuthService.logout();
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/vendor_login', (route) => false);
+      context.goVendorLogin();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -62,7 +63,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     if (confirmed != true) return;
     await VendorAuthService.logout();
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/vendor_login', (route) => false);
+    context.goVendorLogin();
   }
 
   Future<bool?> _confirmLogout() {

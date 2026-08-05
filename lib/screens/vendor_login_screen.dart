@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../router/route_extensions.dart';
 import '../services/api_client.dart';
 import '../services/vendor_auth_service.dart';
 import '../theme/app_theme.dart';
@@ -60,9 +61,17 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
         ? [const Color(0xFF2C1C16), const Color(0xFF1E1410)]
         : [const Color(0xFFFFF7F2), const Color(0xFFFFEAE0)];
 
-    return Scaffold(
-      backgroundColor: context.bgColor,
-      body: LayoutBuilder(
+    return PopScope(
+      // canPop: false prevents the default exit-app behaviour
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // Navigate back to the user login, clearing the back-stack
+        context.goUserLogin();
+      },
+      child: Scaffold(
+        backgroundColor: context.bgColor,
+        body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 720;
 
@@ -103,7 +112,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                           children: [
                             IconButton(
                               icon: Icon(Icons.arrow_back, color: context.textColor, size: 28),
-                              onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                              onPressed: () => context.goUserLogin(),
                             ),
                             const SizedBox(height: 32),
                             Text('Vendor', style: TextStyle(fontSize: 52, fontWeight: FontWeight.w800, color: context.textColor, height: 1.1)),
@@ -170,7 +179,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                         padding: const EdgeInsets.only(left: 10.0, top: 4.0),
                         child: IconButton(
                           icon: Icon(Icons.arrow_back, color: context.textColor, size: 26),
-                          onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                          onPressed: () => context.goUserLogin(),
                         ),
                       ),
                     ),
@@ -240,11 +249,12 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                   ),
                 ],
               ),
-            ],
+        ],
           );
         },
       ),
-    );
+      ),  // closes Scaffold
+    );    // closes PopScope
   }
 
   Widget _buildForm(BuildContext context, {bool showTitle = false}) {
@@ -335,7 +345,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
         const SizedBox(height: 16),
         Center(
           child: InkWell(
-            onTap: () => Navigator.pushNamed(context, '/vendor_register'),
+            onTap: () => context.goRegisterGround(),
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

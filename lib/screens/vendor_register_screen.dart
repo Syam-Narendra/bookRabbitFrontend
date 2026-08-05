@@ -8,10 +8,11 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+import 'package:go_router/go_router.dart';
+import '../router/route_extensions.dart';
 import '../services/api_client.dart';
 import '../services/vendor_auth_service.dart';
 import '../theme/app_theme.dart';
-import 'vendor/vendor_dashboard_screen.dart';
 
 class VendorRegisterScreen extends StatefulWidget {
   const VendorRegisterScreen({super.key});
@@ -101,6 +102,7 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
         _ownerNameController.text = owner.ownerName!;
       }
       _isPhoneVerified = true;
+      // Router guard handles redirect to dashboard for already-logged-in vendors.
     }
   }
 
@@ -798,12 +800,7 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const VendorDashboardScreen(),
-                      ),
-                    );
+                    context.goVendorDashboard();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF7A2F),
@@ -850,9 +847,18 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.bgColor,
-      body: SafeArea(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.goUserLogin();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: context.bgColor,
+        body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= 900;
@@ -904,8 +910,9 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             );
           },
         ),
-      ),
-    );
+        ),  // closes SafeArea
+      ),    // closes Scaffold
+    );      // closes PopScope
   }
 
   // ── Header & Banner Widget ────────────────────────────────────────────────
@@ -946,7 +953,13 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                 Row(
                   children: [
                     InkWell(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.goUserLogin();
+                        }
+                      },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.all(8),

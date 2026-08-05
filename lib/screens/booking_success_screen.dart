@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../router/route_extensions.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:share_plus/share_plus.dart';
@@ -6,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../widgets/touchable_opacity.dart';
 import '../theme/app_theme.dart';
 
-import 'home_screen.dart';
 import 'booking_detail_screen.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
@@ -117,11 +117,7 @@ class BookingSuccessScreen extends StatelessWidget {
                               children: [
                                 GestureDetector(
                                   onTap: () {
-                                    Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 0)),
-                                      (route) => false,
-                                    );
+                                    context.goHome();
                                   },
                                   child: Icon(Icons.arrow_back, color: context.isDark ? Colors.white : const Color(0xFF1C1C1E), size: 28),
                                 ),
@@ -211,11 +207,7 @@ class BookingSuccessScreen extends StatelessWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 0)),
-                                (route) => false,
-                              );
+                              context.goHome();
                             },
                             child: Icon(Icons.arrow_back, color: context.isDark ? Colors.white : const Color(0xFF1C1C1E)),
                           ),
@@ -509,11 +501,7 @@ class BookingSuccessScreen extends StatelessWidget {
         // Buttons
         TouchableOpacity(
           onTap: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 1)),
-              (route) => false,
-            );
+            context.goHistory();
           },
           child: Container(
             width: double.infinity,

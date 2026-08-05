@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/vendor_models.dart';
+import '../../router/route_extensions.dart';
 import '../../services/api_client.dart';
 import '../../services/vendor_auth_service.dart';
 import '../../theme/app_theme.dart';
@@ -82,7 +83,7 @@ class _VendorSessionsPageState extends State<VendorSessionsPage> {
           content: Text('Signed out of this device', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
           backgroundColor: Color(0xFF2E8443),
         ));
-        Navigator.of(context).pushNamedAndRemoveUntil('/vendor_login', (route) => false);
+        context.goVendorLogin();
         return;
       }
       await _load();
@@ -119,7 +120,7 @@ class _VendorSessionsPageState extends State<VendorSessionsPage> {
     try {
       await VendorAuthService.manageSession('logout-everywhere');
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/vendor_login', (route) => false);
+      context.goVendorLogin();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _processing = false);

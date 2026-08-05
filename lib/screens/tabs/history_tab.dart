@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../router/route_extensions.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
 import '../../theme/app_theme.dart';
-import '../booking_detail_screen.dart';
 import '../../widgets/touchable_opacity.dart';
 
 // ─── Exact colours from the reference design ────────────────────────────────
@@ -236,8 +236,10 @@ class _HistoryTabState extends State<HistoryTab>
     final boxBorderCol = isDark ? const Color(0xFF3A322E) : _kPeachBorder;
 
     return TouchableOpacity(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => BookingDetailScreen(booking: b))),
+      onTap: () => context.goHistoryDetails(
+          (b['id'] ?? b['referenceId'] ?? '').toString(),
+          booking: b,
+        ),
       child: Container(
         decoration: BoxDecoration(
           color: context.cardBg,
@@ -494,10 +496,9 @@ class _HistoryTabState extends State<HistoryTab>
                   child: SizedBox(
                     height: 42,
                     child: ElevatedButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => BookingDetailScreen(booking: b)),
+                      onPressed: () => context.goHistoryDetails(
+                        (b['id'] ?? b['referenceId'] ?? '').toString(),
+                        booking: b,
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kOrange,
@@ -548,6 +549,8 @@ class _HistoryTabState extends State<HistoryTab>
       onTap: () {
         if (widget.onProfileTapped != null) {
           widget.onProfileTapped!();
+        } else {
+          context.goAccount();
         }
       },
       child: Stack(

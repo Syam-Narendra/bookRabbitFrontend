@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+import '../router/route_extensions.dart';
 
 class TermsConditionsScreen extends StatefulWidget {
   const TermsConditionsScreen({super.key});
@@ -29,7 +31,13 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
         scrolledUnderElevation: 0.5,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: textColor),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goAccount();
+            }
+          },
         ),
         title: Text(
           'Terms & Conditions',

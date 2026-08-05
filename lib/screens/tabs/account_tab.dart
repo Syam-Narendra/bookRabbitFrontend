@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../router/route_extensions.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,8 +10,6 @@ import '../../services/api_client.dart';
 import '../../services/booking_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
-import '../terms_conditions_screen.dart';
-import '../support_screen.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -160,14 +159,14 @@ class _AccountTabState extends State<AccountTab> {
                       ? null
                       : () async {
                           setDialogState(() => isLoggingOut = true);
-                          final navigator = Navigator.of(dialogContext);
                           try {
                             await AuthService.logout();
                           } catch (_) {
                             // Proceed with logout navigation even if network request fails
                           }
-                          if (!mounted) return;
-                          navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+                          if (dialogContext.mounted) {
+                            dialogContext.goUserLogin();
+                          }
                         },
                   child: isLoggingOut
                       ? const SizedBox(
@@ -830,16 +829,10 @@ class _AccountTabState extends State<AccountTab> {
       children: [
         _buildThemeToggleOption().animate().fade(delay: 450.ms).slideY(begin: 0.1),
         _buildMenuOption('Help & Support', Icons.help_outline, onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SupportScreen()),
-          );
+          context.goSupport();
         }).animate().fade(delay: 500.ms).slideY(begin: 0.1),
         _buildMenuOption('Terms & Conditions', Icons.description_outlined, onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TermsConditionsScreen()),
-          );
+          context.goTerms();
         }).animate().fade(delay: 550.ms).slideY(begin: 0.1),
         _buildMenuOption('Log Out', Icons.logout, isDestructive: true, onTap: _logout).animate().fade(delay: 600.ms).slideY(begin: 0.1),
       ],

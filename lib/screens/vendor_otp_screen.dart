@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../router/route_extensions.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 import '../services/api_client.dart';
@@ -277,7 +278,7 @@ class _VendorOtpScreenState extends State<VendorOtpScreen> {
     try {
       await VendorAuthService.verifyOtp(widget.phone, otp);
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/vendor_dashboard', (route) => false);
+      context.goVendorDashboard();
     } on ApiException catch (e) {
       if (!mounted) return;
       for (final c in _controllers) {
