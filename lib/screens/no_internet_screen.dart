@@ -47,7 +47,12 @@ class _NoInternetScreenState extends State<NoInternetScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            padding: EdgeInsets.fromLTRB(
+              28,
+              32,
+              28,
+              MediaQuery.of(context).size.width >= 720 ? 32 : 110,
+            ),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(

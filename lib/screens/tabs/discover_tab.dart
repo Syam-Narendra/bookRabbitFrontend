@@ -9,6 +9,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/ground_service.dart';
 import '../../theme/app_theme.dart';
+import '../no_internet_screen.dart';
 
 class DiscoverTab extends StatefulWidget {
   final VoidCallback? onProfileTapped;
@@ -750,26 +751,16 @@ class _DiscoverTabState extends State<DiscoverTab> {
                           );
                         }
                         if (hasError) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('Failed to load grounds',
-                                    style: TextStyle(
-                                        color: context.subTextColor,
-                                        fontSize: 16)),
-                                const SizedBox(height: 12),
-                                ElevatedButton(
-                                  onPressed: _fetchGrounds,
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          const Color(0xFFE54F3F)),
-                                  child: const Text('Retry',
-                                      style: TextStyle(
-                                          color: Colors.white)),
-                                ),
-                              ],
-                            ),
+                          return NoInternetScreen(
+                            onRetry: () {
+                              if (mounted) {
+                                setState(() {
+                                  isLoading = true;
+                                  hasError = false;
+                                });
+                              }
+                              _fetchGrounds();
+                            },
                           );
                         }
                         if (filteredGrounds.isEmpty) {

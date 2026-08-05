@@ -6,9 +6,11 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../services/ground_service.dart';
 import '../services/auth_service.dart';
+import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'review_booking_screen.dart';
+import '../widgets/app_snackbar.dart';
 
 class GroundDetailsScreen extends StatefulWidget {
   final String? groundId;
@@ -32,8 +34,8 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   Map<String, dynamic> get ground =>
       (_fetchedGround != null && _fetchedGround!.isNotEmpty)
-          ? _fetchedGround!
-          : widget.ground;
+      ? _fetchedGround!
+      : widget.ground;
   final List<String> _timeSlots = [];
   final List<String> _timeSlots24 = [];
   String? _selectedStartTime;
@@ -154,12 +156,12 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
     String openTimeStr = ground['open_time']?.toString() ?? '10:00';
     String closeTimeStr = ground['close_time']?.toString() ?? '20:00';
-    
+
     int startHour = 10;
     int startMin = 0;
     int endHour = 20;
     int endMin = 0;
-    
+
     try {
       final openParts = openTimeStr.split(':');
       if (openParts.length >= 2) {
@@ -172,18 +174,22 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         endMin = int.parse(closeParts[1]);
       }
     } catch (_) {}
-    
+
     int startTotalMins = startHour * 60 + startMin;
     int endTotalMins = endHour * 60 + endMin;
-    
+
     if (endTotalMins <= startTotalMins) {
       endTotalMins += 24 * 60;
     }
-    
-    for (int currentMins = startTotalMins; currentMins <= endTotalMins - 30; currentMins += 30) {
+
+    for (
+      int currentMins = startTotalMins;
+      currentMins <= endTotalMins - 30;
+      currentMins += 30
+    ) {
       int h = (currentMins ~/ 60) % 24;
       int m = currentMins % 60;
-      
+
       String ampm = h >= 12 ? 'PM' : 'AM';
       int displayHour = h > 12 ? h - 12 : (h == 0 ? 12 : h);
       String minStr = m.toString().padLeft(2, '0');
@@ -213,7 +219,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     int endHours = (totalMins ~/ 60) % 24;
     int endMins = totalMins % 60;
     String endAmPm = endHours >= 12 ? 'PM' : 'AM';
-    int displayEndHours = endHours > 12 ? endHours - 12 : (endHours == 0 ? 12 : endHours);
+    int displayEndHours = endHours > 12
+        ? endHours - 12
+        : (endHours == 0 ? 12 : endHours);
     String displayEndMins = endMins.toString().padLeft(2, '0');
     return '$displayEndHours:$displayEndMins $endAmPm';
   }
@@ -225,7 +233,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     int consecutiveMins = 30;
     for (int i = index + 1; i < _timeSlots24.length; i++) {
       final slot24 = _timeSlots24[i];
-      if (_bookedSegs.contains(slot24) || _heldSegs.contains(slot24) || _isSlotPast(slot24)) {
+      if (_bookedSegs.contains(slot24) ||
+          _heldSegs.contains(slot24) ||
+          _isSlotPast(slot24)) {
         break;
       }
       consecutiveMins += 30;
@@ -237,7 +247,8 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     final selectedDate = _selectedDate;
     if (selectedDate == null) return false;
     final now = DateTime.now();
-    final isToday = selectedDate.year == now.year &&
+    final isToday =
+        selectedDate.year == now.year &&
         selectedDate.month == now.month &&
         selectedDate.day == now.day;
     if (!isToday) return false;
@@ -276,14 +287,28 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
 
   Future<void> _proceedToReview() async {
     if (_selectedStartTime == null || _selectedDate == null) return;
-    if (AuthService.currentUser == null) {
+
+    if (ApiClient.token == null || ApiClient.token!.isEmpty) {
       context.goUserLogin();
       return;
+    }
+
+    if (AuthService.currentUser == null) {
+      try {
+        await AuthService.fetchMe();
+      } catch (_) {
+        if (ApiClient.token == null || ApiClient.token!.isEmpty) {
+          if (mounted) context.goUserLogin();
+          return;
+        }
+      }
     }
 
     final fare = ((_basePrice / 60) * _durationMins).round();
     final platformFee = (fare * (_platformFeePct / 100)).ceil();
     final finalPrice = fare + platformFee;
+
+    if (!mounted) return;
 
     await Navigator.push(
       context,
@@ -328,8 +353,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
       localDuration = maxAllowedMins;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: context.cardBg,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -347,7 +373,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             final canDecrease = localDuration > 30;
             final canIncrease = (localDuration + 30) <= maxAllowedMins;
 
-            Widget stepperButton({required IconData icon, required bool enabled, required VoidCallback onTap}) {
+            Widget stepperButton({
+              required IconData icon,
+              required bool enabled,
+              required VoidCallback onTap,
+            }) {
               return InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: enabled ? onTap : null,
@@ -358,15 +388,28 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                     color: enabled ? tint : context.subCardBg,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: enabled ? accent : context.subTextColor.withValues(alpha: 0.5), size: 22),
+                  child: Icon(
+                    icon,
+                    color: enabled
+                        ? accent
+                        : context.subTextColor.withValues(alpha: 0.5),
+                    size: 22,
+                  ),
                 ),
               );
             }
 
-            Widget statChip({required String label, required String value, Color? valueColor}) {
+            Widget statChip({
+              required String label,
+              required String value,
+              Color? valueColor,
+            }) {
               return Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: context.cardBg,
                     borderRadius: BorderRadius.circular(10),
@@ -374,12 +417,24 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   ),
                   child: Column(
                     children: [
-                      Text(label, style: TextStyle(color: context.subTextColor, fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: context.subTextColor,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
                       const SizedBox(height: 3),
                       Text(
                         value,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: valueColor ?? context.textColor, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: valueColor ?? context.textColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -414,18 +469,37 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       Expanded(
                         child: Text(
                           'How long do you want to play?',
-                          style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                          style: TextStyle(
+                            color: context.textColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       InkWell(
                         borderRadius: BorderRadius.circular(16),
-                        onTap: () => Navigator.pop(context),
+                        onTap: () {
+                          if (mounted) {
+                            setState(() {
+                              _selectedStartTime = null;
+                            });
+                          }
+                          Navigator.pop(context, false);
+                        },
                         child: Container(
                           width: 30,
                           height: 30,
-                          decoration: BoxDecoration(color: context.subCardBg, shape: BoxShape.circle),
-                          child: Icon(Icons.close, color: context.subTextColor, size: 16),
+                          decoration: BoxDecoration(
+                            color: context.subCardBg,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.close,
+                            color: context.subTextColor,
+                            size: 16,
+                          ),
                         ),
                       ),
                     ],
@@ -434,34 +508,56 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   Center(
                     child: Text(
                       '${_formatDurationHrs(localDuration)} - ends at $endTime',
-                      style: TextStyle(color: accent, fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: context.subCardBg,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
                       children: [
-                        stepperButton(icon: Icons.remove, enabled: canDecrease, onTap: () => setModalState(() => localDuration -= 30)),
+                        stepperButton(
+                          icon: Icons.remove,
+                          enabled: canDecrease,
+                          onTap: () => setModalState(() => localDuration -= 30),
+                        ),
                         Expanded(
                           child: Column(
                             children: [
                               Text(
                                 _formatDuration(localDuration),
-                                style: TextStyle(color: context.textColor, fontSize: 24, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: context.textColor,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text(
                                 'until $endTime',
-                                style: TextStyle(color: context.subTextColor, fontSize: 12),
+                                style: TextStyle(
+                                  color: context.subTextColor,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        stepperButton(icon: Icons.add, enabled: canIncrease, onTap: () => setModalState(() => localDuration += 30)),
+                        stepperButton(
+                          icon: Icons.add,
+                          enabled: canIncrease,
+                          onTap: () => setModalState(() => localDuration += 30),
+                        ),
                       ],
                     ),
                   ),
@@ -473,28 +569,28 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   ),
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 18,
+                      horizontal: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: tint,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: accent.withValues(alpha: 0.3)),
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
                               'TOTAL TO PAY',
-                              style: TextStyle(color: context.subTextColor, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1),
-                            ),
-                            if (canDecrease)
-                              InkWell(
-                                onTap: () => setModalState(() => localDuration = 30),
-                                child: Text('Reset', style: TextStyle(color: accent, fontWeight: FontWeight.w600, fontSize: 12)),
+                              style: TextStyle(
+                                color: context.subTextColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1,
                               ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -504,28 +600,37 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                           children: [
                             Text(
                               '₹$total',
-                              style: TextStyle(color: accent, fontSize: 26, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                color: accent,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '(₹$fare fare + ₹$platformFee platform fee)',
-                              style: TextStyle(color: context.subTextColor, fontSize: 12),
+                              'incl. all taxes & platform fees',
+                              style: TextStyle(
+                                color: context.subTextColor,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        IntrinsicHeight(
-                          child: Row(
-                            children: [
-                              statChip(label: 'FROM', value: slot),
-                              const SizedBox(width: 6),
-                              statChip(label: 'TO', value: endTime),
-                              const SizedBox(width: 6),
-                              statChip(label: 'DURATION', value: _formatDuration(localDuration), valueColor: accent),
-                              const SizedBox(width: 6),
-                              statChip(label: 'RATE', value: '₹$_basePrice/hr'),
-                            ],
-                          ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            statChip(label: 'FROM', value: slot),
+                            const SizedBox(width: 6),
+                            statChip(label: 'TO', value: endTime),
+                            const SizedBox(width: 6),
+                            statChip(
+                              label: 'DURATION',
+                              value: _formatDuration(localDuration),
+                              valueColor: accent,
+                            ),
+                            const SizedBox(width: 6),
+                            statChip(label: 'RATE', value: '₹$_basePrice/hr'),
+                          ],
                         ),
                         const SizedBox(height: 14),
                         ElevatedButton(
@@ -534,21 +639,34 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                               _selectedStartTime = slot;
                               _durationMins = localDuration;
                             });
-                            Navigator.pop(context);
+                            Navigator.pop(context, true);
                             _proceedToReview();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accent,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             elevation: 0,
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text('Confirm Booking', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text(
+                                'Confirm Booking',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               SizedBox(width: 8),
-                              Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                              Icon(
+                                Icons.arrow_forward,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ],
                           ),
                         ),
@@ -561,134 +679,183 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           },
         );
       },
-    );
+    ).then((confirmed) {
+      if (confirmed != true && mounted) {
+        setState(() {
+          _selectedStartTime = null;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isFetchingGround) {
-      return Scaffold(
-        backgroundColor: context.bgColor,
-        body: const Center(child: CircularProgressIndicator()),
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _handleBack();
+        },
+        child: Scaffold(
+          backgroundColor: context.bgColor,
+          body: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
-    return Scaffold(
-      backgroundColor: context.bgColor,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 720;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: context.bgColor,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 720;
 
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.arrow_back_ios_new,
+                                    color: context.textColor,
+                                    size: 20,
+                                  ),
+                                  onPressed: _handleBack,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    ground['title'] ?? 'Ground Details',
+                                    style: TextStyle(
+                                      color: context.textColor,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: _buildImageWidget(height: 320),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _buildTitleAndDetails(),
+                                  const SizedBox(height: 32),
+                                  _buildDateSelector(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    VerticalDivider(width: 1, color: context.borderColor),
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(
+                                32,
+                                24,
+                                32,
+                                24,
+                              ),
+                              child: _buildSlotGridSection(),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 20,
+                            ),
+                            decoration: BoxDecoration(
+                              color: context.cardBg,
+                              border: Border(
+                                top: BorderSide(color: context.borderColor),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: context.isDark ? 0.3 : 0.05,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, -4),
+                                ),
+                              ],
+                            ),
+                            child: _buildBottomBarContent(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return Column(
                 children: [
                   Expanded(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.arrow_back_ios_new, color: context.textColor, size: 20),
-                                onPressed: _handleBack,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  ground['title'] ?? 'Ground Details',
-                                  style: TextStyle(color: context.textColor, fontSize: 20, fontWeight: FontWeight.bold),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildMobileHeroHeader(),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ClipRRect(borderRadius: BorderRadius.circular(16), child: _buildImageWidget(height: 320)),
-                                const SizedBox(height: 24),
                                 _buildTitleAndDetails(),
-                                const SizedBox(height: 32),
+                                const SizedBox(height: 14),
                                 _buildDateSelector(),
+                                const SizedBox(height: 14),
+                                Container(
+                                  key: _slotAreaKey,
+                                  child: _buildSlotGridSection(),
+                                ),
                               ],
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                  VerticalDivider(width: 1, color: context.borderColor),
-                  Expanded(
-                    flex: 1,
-                    child: LayoutBuilder(
-                      builder: (context, rightConstraints) {
-                        final minH = rightConstraints.maxHeight.isFinite
-                            ? (rightConstraints.maxHeight - 48).clamp(0.0, double.infinity)
-                            : 0.0;
-                        return SingleChildScrollView(
-                          child: Container(
-                            constraints: BoxConstraints(minHeight: minH),
-                            padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSlotGridSection(),
-                                const SizedBox(height: 32),
-                                _buildBottomBarContent(),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  _buildStickyBottomBar(),
                 ],
               );
-            }
-
-            return Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildMobileHeroHeader(),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildTitleAndDetails(),
-                              const SizedBox(height: 14),
-                              _buildDateSelector(),
-                              const SizedBox(height: 14),
-                              Container(
-                                key: _slotAreaKey,
-                                child: _buildSlotGridSection(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                _buildStickyBottomBar(),
-              ],
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -704,7 +871,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           child: CircleAvatar(
             backgroundColor: Colors.black45,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.white,
+                size: 18,
+              ),
               onPressed: _handleBack,
             ),
           ),
@@ -728,7 +899,12 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             url as String,
             fit: BoxFit.cover,
             width: double.infinity,
-            errorBuilder: (_, _, _) => Image.asset('assets/images/sports_bunnies.png', height: height, width: double.infinity, fit: BoxFit.cover),
+            errorBuilder: (_, _, _) => Image.asset(
+              'assets/images/sports_bunnies.png',
+              height: height,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
           );
         }).toList(),
       );
@@ -738,12 +914,26 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     final fallback = 'assets/images/sports_bunnies.png';
 
     if (imageUrl.isEmpty) {
-      return Image.asset(fallback, height: height, width: double.infinity, fit: BoxFit.cover);
+      return Image.asset(
+        fallback,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
     }
 
     if (imageUrl.startsWith('assets/')) {
-      return Image.asset(imageUrl, height: height, width: double.infinity, fit: BoxFit.cover,
-        errorBuilder: (_, e, s) => Image.asset(fallback, height: height, width: double.infinity, fit: BoxFit.cover),
+      return Image.asset(
+        imageUrl,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, e, s) => Image.asset(
+          fallback,
+          height: height,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
       );
     }
 
@@ -764,7 +954,12 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         );
       },
       errorBuilder: (context, error, stackTrace) {
-        return Image.asset(fallback, height: height, width: double.infinity, fit: BoxFit.cover);
+        return Image.asset(
+          fallback,
+          height: height,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
       },
     );
   }
@@ -780,7 +975,12 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             Expanded(
               child: Text(
                 ground['title'] ?? 'Sports Ground',
-                style: TextStyle(color: context.textColor, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+                style: TextStyle(
+                  color: context.textColor,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -792,11 +992,19 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.sports_soccer, color: Color(0xFFFF7A2F), size: 14),
+                  const Icon(
+                    Icons.sports_soccer,
+                    color: Color(0xFFFF7A2F),
+                    size: 14,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     ground['type'] ?? 'Sports',
-                    style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Color(0xFFFF7A2F),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -828,23 +1036,40 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Select Date', style: TextStyle(color: context.textColor, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              'Select Date',
+              style: TextStyle(
+                color: context.textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             if (_selectedDate != null)
               Text(
                 DateFormat('MMMM yyyy').format(_selectedDate!),
-                style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Color(0xFFFF7A2F),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
           ],
         ),
         const SizedBox(height: 4),
         Row(
           children: [
-            const Icon(Icons.info_outline_rounded, size: 12, color: Color(0xFFD97706)),
+            const Icon(
+              Icons.info_outline_rounded,
+              size: 12,
+              color: Color(0xFFD97706),
+            ),
             const SizedBox(width: 4),
             Text(
               'Bookings open for next 15 days only',
               style: TextStyle(
-                color: context.isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+                color: context.isDark
+                    ? const Color(0xFFFBBF24)
+                    : const Color(0xFFD97706),
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
@@ -859,7 +1084,8 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             itemCount: 15,
             itemBuilder: (context, index) {
               final date = now.add(Duration(days: index));
-              final isSelected = _selectedDate != null &&
+              final isSelected =
+                  _selectedDate != null &&
                   _selectedDate!.year == date.year &&
                   _selectedDate!.month == date.month &&
                   _selectedDate!.day == date.day;
@@ -877,10 +1103,14 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                   width: 52,
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFFF7A2F) : context.cardBg,
+                    color: isSelected
+                        ? const Color(0xFFFF7A2F)
+                        : context.cardBg,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFFFF7A2F) : context.borderColor,
+                      color: isSelected
+                          ? const Color(0xFFFF7A2F)
+                          : context.borderColor,
                     ),
                   ),
                   child: Column(
@@ -889,7 +1119,9 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                       Text(
                         DateFormat('EEE').format(date).toUpperCase(),
                         style: TextStyle(
-                          color: isSelected ? Colors.white : context.subTextColor,
+                          color: isSelected
+                              ? Colors.white
+                              : context.subTextColor,
                           fontSize: 10.5,
                           fontWeight: FontWeight.bold,
                         ),
@@ -921,17 +1153,34 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Available Slots', style: TextStyle(color: context.textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'Available Slots',
+              style: TextStyle(
+                color: context.textColor,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             if (_isLoadingAvailability)
               const SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7A2F)),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFFFF7A2F),
+                ),
               ),
           ],
         ),
         const SizedBox(height: 8),
-        Text('Tap a slot to choose your duration', style: TextStyle(color: context.subTextColor, fontSize: 12, fontStyle: FontStyle.italic)),
+        Text(
+          'Tap a slot to choose your duration',
+          style: TextStyle(
+            color: context.subTextColor,
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
         const SizedBox(height: 16),
 
         if (_isLoadingAvailability)
@@ -946,7 +1195,11 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.calendar_today, color: context.subTextColor, size: 40),
+                  Icon(
+                    Icons.calendar_today,
+                    color: context.subTextColor,
+                    size: 40,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'No slots available',
@@ -957,31 +1210,33 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
             ),
           )
         else
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  childAspectRatio: 1.9,
-                ),
-                itemCount: _timeSlots.length,
-                itemBuilder: (context, index) {
-                  final slot = _timeSlots[index];
-                  final slot24 = _timeSlots24[index];
-                  final isSelected = _selectedStartTime == slot;
-                  final isPast = _isSlotPast(slot24);
-                  final isBooked = _bookedSegs.contains(slot24);
-                  final isHeld = !isBooked && _heldSegs.contains(slot24);
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 92,
+              mainAxisExtent: 44, // Fixed height across ALL viewports!
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: _timeSlots.length,
+            itemBuilder: (context, index) {
+              final slot = _timeSlots[index];
+              final slot24 = _timeSlots24[index];
+              final isSelected = _selectedStartTime == slot;
+              final isPast = _isSlotPast(slot24);
+              final isBooked = _bookedSegs.contains(slot24);
+              final isHeld = !isBooked && _heldSegs.contains(slot24);
 
-                  return _buildSlotChip(slot, slot24, isSelected: isSelected, isPast: isPast, isBooked: isBooked, isHeld: isHeld);
-                },
-              ),
-            ],
+              return _buildSlotChip(
+                slot,
+                slot24,
+                isSelected: isSelected,
+                isPast: isPast,
+                isBooked: isBooked,
+                isHeld: isHeld,
+              );
+            },
           ),
       ],
     );
@@ -990,28 +1245,37 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
   Widget _buildSlotSkeletonGrid() {
     return Shimmer.fromColors(
       baseColor: context.subCardBg,
-      highlightColor: context.isDark ? const Color(0xFF3A3A3C) : const Color(0xFFE5E5EA),
+      highlightColor: context.isDark
+          ? const Color(0xFF3A3A3C)
+          : const Color(0xFFE5E5EA),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 92,
+          mainAxisExtent: 44,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
-          childAspectRatio: 1.9,
         ),
         itemCount: 12,
         itemBuilder: (_, _) => Container(
           decoration: BoxDecoration(
             color: context.subCardBg,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSlotChip(String timeStr, String slot24, {required bool isSelected, required bool isPast, required bool isBooked, required bool isHeld}) {
+  Widget _buildSlotChip(
+    String timeStr,
+    String slot24, {
+    required bool isSelected,
+    required bool isPast,
+    required bool isBooked,
+    required bool isHeld,
+  }) {
     Color bgColor;
     Color textColor;
     Color borderColor;
@@ -1056,9 +1320,7 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
     return GestureDetector(
       onTap: isDisabled
           ? () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('This time slot is unavailable.')),
-              );
+              AppSnackBar.showError(context, 'This time slot is unavailable.');
             }
           : () {
               setState(() {
@@ -1073,75 +1335,89 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1.0),
+            border: Border.all(
+              color: borderColor,
+              width: isSelected ? 1.5 : 1.0,
+            ),
           ),
-          child: Stack(
-            children: [
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: statusText != null ? 5 : 0),
-                  child: Text(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
                     timeStr,
                     style: TextStyle(
                       color: textColor,
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      fontSize: 11.5,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ),
-              if (statusText != null)
-                Positioned(
-                  bottom: 6,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isHeld) ...[
-                        Icon(
-                          Icons.hourglass_top_rounded,
-                          size: 9.5,
-                          color: textColor.withValues(alpha: 0.9),
+                  if (statusText != null) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isHeld) ...[
+                          Icon(
+                            Icons.hourglass_top_rounded,
+                            size: 9.5,
+                            color: textColor.withValues(alpha: 0.9),
+                          ),
+                          const SizedBox(width: 2),
+                        ],
+                        Text(
+                          statusText,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: textColor.withValues(alpha: 0.9),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            height: 1.0,
+                          ),
                         ),
-                        const SizedBox(width: 2),
                       ],
-                      Text(
-                        statusText,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: textColor.withValues(alpha: 0.9),
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.w700,
-                          height: 1.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
- 
-
   Widget _buildStickyBottomBar() {
+    final isWide = MediaQuery.of(context).size.width >= 720;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 10,
+        bottom: isWide ? 14 : (68 + bottomInset),
+      ),
       decoration: BoxDecoration(
         color: context.cardBg,
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, -4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: context.isDark ? 0.35 : 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
         ],
+        border: Border(top: BorderSide(color: context.borderColor)),
       ),
-      child: SafeArea(
-        top: false,
-        child: _buildBottomBarContent(),
-      ),
+      child: _buildBottomBarContent(),
     );
   }
 
@@ -1154,7 +1430,15 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('TOTAL PRICE', style: TextStyle(color: context.subTextColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+            Text(
+              'TOTAL PRICE',
+              style: TextStyle(
+                color: context.subTextColor,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+              ),
+            ),
             const SizedBox(height: 2),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -1162,10 +1446,17 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               children: [
                 Text(
                   '₹$price',
-                  style: const TextStyle(color: Color(0xFFFF7A2F), fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Color(0xFFFF7A2F),
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                Text('/ ${_formatDuration(_durationMins)}', style: TextStyle(color: context.subTextColor, fontSize: 12)),
+                Text(
+                  '/ ${_formatDuration(_durationMins)}',
+                  style: TextStyle(color: context.subTextColor, fontSize: 12),
+                ),
               ],
             ),
           ],
@@ -1179,10 +1470,15 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
                 if (_selectedStartTime == null) {
                   final ctx = _slotAreaKey.currentContext;
                   if (ctx != null) {
-                    Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+                    Scrollable.ensureVisible(
+                      ctx,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                    );
                   }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please select an available time slot first.')),
+                  AppSnackBar.showError(
+                    context,
+                    'Please select an available time slot first.',
                   );
                 } else {
                   _proceedToReview();
@@ -1190,12 +1486,18 @@ class _GroundDetailsScreenState extends State<GroundDetailsScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF7A2F),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
               child: Text(
                 _selectedStartTime == null ? 'Select Slot' : 'Book Now',
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),

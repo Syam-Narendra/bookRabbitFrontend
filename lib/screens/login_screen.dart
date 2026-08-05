@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import 'otp_screen.dart';
 import '../widgets/touchable_opacity.dart';
+import '../widgets/app_snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -247,10 +248,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ? null
               : () async {
                   if (phoneController.text.length != 10) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Please enter a valid 10-digit mobile number.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                      backgroundColor: Color(0xFFD32F2F),
-                    ));
+                    AppSnackBar.showError(
+                      context,
+                      'Please enter a valid 10-digit mobile number.',
+                    );
                     return;
                   }
                   final phone = phoneController.text;
@@ -259,19 +260,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     final devOtp = await AuthService.sendOtp(phone);
                     if (!context.mounted) return;
                     if (devOtp != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('DEV OTP: $devOtp', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                        backgroundColor: Colors.black87,
-                        duration: const Duration(seconds: 6),
-                      ));
+                      AppSnackBar.showInfo(context, 'DEV OTP: $devOtp');
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (_) => OtpScreen(phone: phone)));
                   } on ApiException catch (e) {
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                      backgroundColor: const Color(0xFFD32F2F),
-                    ));
+                    AppSnackBar.showError(context, e.message);
                   } finally {
                     if (context.mounted) setState(() => _isSubmitting = false);
                   }

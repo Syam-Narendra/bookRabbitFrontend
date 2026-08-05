@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/touchable_opacity.dart';
+import '../no_internet_screen.dart';
 
 // ─── Exact colours from the reference design ────────────────────────────────
 const _kOrange     = Color(0xFFE5500A);   // status badge, icons, buttons
@@ -695,21 +696,7 @@ class _HistoryTabState extends State<HistoryTab>
   }
 
   // ─── ERROR ─────────────────────────────────────────────────────────────────
-  Widget _buildError() => Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.wifi_off_rounded, color: _kGrey, size: 48),
-          const SizedBox(height: 16),
-          const Text('Failed to load bookings',
-              style: TextStyle(color: _kGrey, fontSize: 16)),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: _fetchBookings,
-            style: ElevatedButton.styleFrom(
-                backgroundColor: _kOrange, foregroundColor: Colors.white),
-            child: const Text('Retry'),
-          ),
-        ]),
-      );
+  Widget _buildError() => NoInternetScreen(onRetry: _fetchBookings);
 
   // ─── GROUND IMAGE ──────────────────────────────────────────────────────────
   String _fallback(String type) {

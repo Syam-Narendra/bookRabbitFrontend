@@ -80,15 +80,19 @@ class AuthService {
   /// Called at app boot. Returns true if a valid, still-live session was restored.
   static Future<bool> restoreSession() async {
     await ApiClient.loadToken();
-    if (ApiClient.token == null) return false;
+    if (ApiClient.token == null || ApiClient.token!.isEmpty) return false;
 
     try {
       await fetchMe();
       return true;
-    } catch (_) {
+    } on AuthException catch (_) {
+      // Server 401/403 — Token is invalid or expired, clear session
       currentUser = null;
       await ApiClient.clearToken();
       return false;
+    } catch (_) {
+      // Transient network failure / Offline — keep saved token so user stays logged in!
+      return true;
     }
   }
 }

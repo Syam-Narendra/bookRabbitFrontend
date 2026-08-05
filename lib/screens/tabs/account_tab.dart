@@ -10,6 +10,7 @@ import '../../services/api_client.dart';
 import '../../services/booking_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
+import '../no_internet_screen.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -22,6 +23,7 @@ class _AccountTabState extends State<AccountTab> {
   final TextEditingController _firstNameController = TextEditingController();
   bool _isUploadingPhoto = false;
   bool _isLoadingStats = true;
+  bool _hasError = false;
 
   int _gamesCount = 0;
   int _upcomingCount = 0;
@@ -43,32 +45,34 @@ class _AccountTabState extends State<AccountTab> {
   void initState() {
     super.initState();
     _firstNameController.text = AuthService.currentUser?.fullName ?? '';
-    AuthService.fetchMe().then((_) {
-      if (!mounted) return;
-      setState(() {
-        _firstNameController.text = AuthService.currentUser?.fullName ?? '';
-      });
-    }).catchError((_) {
-      // Offline / request failed — keep showing the cached currentUser.
-    });
-    _fetchStats();
+    _loadAccountData();
   }
 
-  Future<void> _fetchStats() async {
-    setState(() => _isLoadingStats = true);
+  Future<void> _loadAccountData() async {
+    if (mounted) setState(() { _isLoadingStats = true; _hasError = false; });
     try {
+      if (AuthService.currentUser == null) {
+        await AuthService.fetchMe();
+      }
       final bookings = await BookingService.fetchMyBookings();
       final stats = BookingService.computeStats(bookings);
       if (!mounted) return;
       setState(() {
+        _firstNameController.text = AuthService.currentUser?.fullName ?? '';
         _gamesCount = stats['games']!.toInt();
         _hoursTotal = stats['hours']!.toDouble();
         _upcomingCount = stats['upcoming']!.toInt();
         _isLoadingStats = false;
+        _hasError = false;
       });
     } catch (_) {
-      // Offline / request failed — keep showing zeros rather than mock data.
-      if (mounted) setState(() => _isLoadingStats = false);
+      if (!mounted) return;
+      setState(() {
+        _isLoadingStats = false;
+        if (AuthService.currentUser == null) {
+          _hasError = true;
+        }
+      });
     }
   }
 
@@ -292,6 +296,9 @@ class _AccountTabState extends State<AccountTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (_hasError) {
+      return NoInternetScreen(onRetry: _loadAccountData);
+    }
     return SafeArea(
       bottom: false,
       child: LayoutBuilder(

@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../widgets/touchable_opacity.dart';
+import '../widgets/app_snackbar.dart';
 
 class SetupProfileScreen extends StatefulWidget {
   const SetupProfileScreen({super.key});
@@ -147,32 +148,25 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                               TextSpan(text: '.'),
                             ],
                           ),
-                        ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                        ).animate().fade(delay: 350.ms).slideY(begin: 0.1),
                         const SizedBox(height: 40),
                       ],
                     ),
                   ),
                 ),
-                // Bottom Actions
+                // Submit button
                 TouchableOpacity(
                   onTap: _isSubmitting
                       ? null
                       : () async {
                           if (_nameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Please enter your first name."),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
+                            AppSnackBar.showError(context, "Please enter your first name.");
                             return;
                           }
                           if (!_acceptTerms) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Please accept the Privacy Policy and Terms and Conditions."),
-                                backgroundColor: Colors.redAccent,
-                              ),
+                            AppSnackBar.showError(
+                              context,
+                              "Please accept the Privacy Policy and Terms and Conditions.",
                             );
                             return;
                           }
@@ -183,12 +177,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                             context.goHome();
                           } on ApiException catch (e) {
                             if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(e.message),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
+                            AppSnackBar.showError(context, e.message);
                           } finally {
                             if (context.mounted) {
                               setState(() => _isSubmitting = false);

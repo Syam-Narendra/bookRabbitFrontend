@@ -5,6 +5,7 @@ import '../router/route_extensions.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_snackbar.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
@@ -138,10 +139,7 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please enter the 6-digit OTP.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: Color(0xFFD32F2F),
-      ));
+      AppSnackBar.showError(context, 'Please enter the 6-digit OTP.');
       return;
     }
     setState(() => _isVerifying = true);
@@ -159,10 +157,7 @@ class _OtpScreenState extends State<OtpScreen> {
         c.clear();
       }
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e.message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: const Color(0xFFD32F2F),
-      ));
+      AppSnackBar.showError(context, e.message);
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
