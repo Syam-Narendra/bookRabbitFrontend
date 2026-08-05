@@ -37,7 +37,15 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
   String _selectedSport = 'Cricket';
   TimeOfDay _openTime = const TimeOfDay(hour: 6, minute: 0);
   TimeOfDay _closeTime = const TimeOfDay(hour: 22, minute: 0);
-  final Set<String> _selectedDays = {'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'};
+  final Set<String> _selectedDays = {
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+  };
 
   List<XFile> _pickedImages = [];
   bool _isPhoneVerified = false;
@@ -57,7 +65,15 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
   bool _isSearching = false;
   Timer? _searchDebounceTimer;
 
-  final List<String> _allDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  final List<String> _allDays = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+  ];
 
   final List<Map<String, String>> _sports = [
     {'name': 'Cricket', 'icon': '🏏'},
@@ -104,21 +120,6 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
   }
 
   // Calculate completion percentage (0 - 100)
-  double get _completionPercentage {
-    int totalPoints = 0;
-    int maxPoints = 8;
-
-    if (_ownerNameController.text.trim().isNotEmpty) totalPoints++;
-    if (_phoneController.text.trim().length == 10) totalPoints++;
-    if (_emailController.text.trim().contains('@')) totalPoints++;
-    if (_groundNameController.text.trim().isNotEmpty) totalPoints++;
-    if (int.tryParse(_priceController.text.trim()) != null && int.parse(_priceController.text.trim()) > 0) totalPoints++;
-    if (_addressController.text.trim().isNotEmpty) totalPoints++;
-    if (_selectedDays.isNotEmpty) totalPoints++;
-    if (_pickedImages.isNotEmpty) totalPoints++;
-
-    return (totalPoints / maxPoints).clamp(0.0, 1.0);
-  }
 
   String _formatTimeOfDay(TimeOfDay t) {
     final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
@@ -145,7 +146,10 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
   Future<void> _sendOtp() async {
     final phone = _phoneController.text.trim();
     if (phone.length != 10) {
-      _showSnackBar('Please enter a valid 10-digit phone number', isError: true);
+      _showSnackBar(
+        'Please enter a valid 10-digit phone number',
+        isError: true,
+      );
       return;
     }
 
@@ -191,7 +195,9 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: modalContext.cardBg,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                 ),
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -218,16 +224,26 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Enter the 6-digit OTP sent to +91 $phone',
-                      style: TextStyle(fontSize: 14, color: modalContext.subTextColor),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: modalContext.subTextColor,
+                      ),
                     ),
                     if (devOtp != null) ...[
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF3EC),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFF7A2F).withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFFF7A2F,
+                            ).withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Text(
                           'DEV OTP: $devOtp',
@@ -255,14 +271,24 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                         filled: true,
                         fillColor: modalContext.subCardBg,
                         hintText: '000000',
-                        hintStyle: TextStyle(color: modalContext.subTextColor.withValues(alpha: 0.5), letterSpacing: 8),
+                        hintStyle: TextStyle(
+                          color: modalContext.subTextColor.withValues(
+                            alpha: 0.5,
+                          ),
+                          letterSpacing: 8,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: modalContext.borderColor),
+                          borderSide: BorderSide(
+                            color: modalContext.borderColor,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFFF7A2F), width: 2),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFFF7A2F),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -276,7 +302,10 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                             : () async {
                                 final otp = otpController.text.trim();
                                 if (otp.length != 6) {
-                                  _showSnackBar('Enter a 6-digit OTP', isError: true);
+                                  _showSnackBar(
+                                    'Enter a 6-digit OTP',
+                                    isError: true,
+                                  );
                                   return;
                                 }
                                 setModalState(() => isVerifying = true);
@@ -289,29 +318,43 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                                     if (modalContext.mounted) {
                                       Navigator.pop(modalContext);
                                     }
-                                    _showSnackBar('Phone number verified successfully!');
+                                    _showSnackBar(
+                                      'Phone number verified successfully!',
+                                    );
                                   }
                                 } on ApiException catch (e) {
                                   setModalState(() => isVerifying = false);
                                   _showSnackBar(e.message, isError: true);
                                 } catch (_) {
                                   setModalState(() => isVerifying = false);
-                                  _showSnackBar('Invalid OTP. Please check and retry.', isError: true);
+                                  _showSnackBar(
+                                    'Invalid OTP. Please check and retry.',
+                                    isError: true,
+                                  );
                                 }
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF7A2F),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: isVerifying
                             ? const SizedBox(
                                 width: 22,
                                 height: 22,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
                               )
                             : const Text(
                                 'Verify & Continue',
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                       ),
                     ),
@@ -335,9 +378,12 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
         final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+          ),
         );
         setState(() {
           _mapLat = position.latitude;
@@ -359,13 +405,27 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
   Future<void> _reverseGeocodeOsm(double lat, double lng) async {
     try {
       final url = Uri.parse(
-          'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1');
-      final res = await http.get(url, headers: {'User-Agent': 'BookRabbitApp/1.0'}).timeout(const Duration(seconds: 5));
+        'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1',
+      );
+      final res = await http
+          .get(url, headers: {'User-Agent': 'BookRabbitApp/1.0'})
+          .timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final data = json.decode(res.body) as Map<String, dynamic>;
         final addr = data['address'] as Map<String, dynamic>? ?? {};
-        final road = (addr['road'] as String?) ?? (addr['pedestrian'] as String?) ?? (addr['suburb'] as String?) ?? (addr['neighbourhood'] as String?) ?? '';
-        final city = (addr['city'] as String?) ?? (addr['town'] as String?) ?? (addr['village'] as String?) ?? (addr['municipality'] as String?) ?? (addr['county'] as String?) ?? '';
+        final road =
+            (addr['road'] as String?) ??
+            (addr['pedestrian'] as String?) ??
+            (addr['suburb'] as String?) ??
+            (addr['neighbourhood'] as String?) ??
+            '';
+        final city =
+            (addr['city'] as String?) ??
+            (addr['town'] as String?) ??
+            (addr['village'] as String?) ??
+            (addr['municipality'] as String?) ??
+            (addr['county'] as String?) ??
+            '';
         final postcode = (addr['postcode'] as String?) ?? '';
         final fullAddr = data['display_name'] as String? ?? '';
 
@@ -374,7 +434,9 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             _addressController.text = fullAddr.isNotEmpty ? fullAddr : road;
             if (city.isNotEmpty) _cityController.text = city;
             if (postcode.isNotEmpty) _pincodeController.text = postcode;
-            _pinnedAddress = fullAddr.isNotEmpty ? fullAddr : '$road, $city, $postcode';
+            _pinnedAddress = fullAddr.isNotEmpty
+                ? fullAddr
+                : '$road, $city, $postcode';
           });
         }
       }
@@ -404,8 +466,12 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
 
       // 1. Try Photon OpenStreetMap API (Fast, zero CORS issues)
       try {
-        final photonUrl = Uri.parse('https://photon.komoot.io/api/?q=${Uri.encodeComponent(query)}&limit=5');
-        final res = await http.get(photonUrl).timeout(const Duration(seconds: 4));
+        final photonUrl = Uri.parse(
+          'https://photon.komoot.io/api/?q=${Uri.encodeComponent(query)}&limit=5',
+        );
+        final res = await http
+            .get(photonUrl)
+            .timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
           final data = json.decode(res.body) as Map<String, dynamic>;
           final features = data['features'] as List<dynamic>? ?? [];
@@ -420,14 +486,23 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
 
               final name = (props['name'] as String?) ?? '';
               final street = (props['street'] as String?) ?? name;
-              final city = (props['city'] as String?) ?? (props['state'] as String?) ?? '';
+              final city =
+                  (props['city'] as String?) ??
+                  (props['state'] as String?) ??
+                  '';
               final postcode = (props['postcode'] as String?) ?? '';
 
-              final subtitleList = [props['city'], props['state'], props['country']].where((s) => s != null && s.toString().isNotEmpty).join(', ');
+              final subtitleList = [
+                props['city'],
+                props['state'],
+                props['country'],
+              ].where((s) => s != null && s.toString().isNotEmpty).join(', ');
 
               parsedResults.add({
                 'title': name.isNotEmpty ? name : street,
-                'subtitle': subtitleList.isNotEmpty ? subtitleList : 'OpenStreetMap location',
+                'subtitle': subtitleList.isNotEmpty
+                    ? subtitleList
+                    : 'OpenStreetMap location',
                 'lat': lat,
                 'lng': lng,
                 'street': street,
@@ -441,8 +516,12 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
 
       // 2. Fallback to Nominatim if Photon yields no results
       if (parsedResults.isEmpty) {
-        final nomUrl = Uri.parse('https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&addressdetails=1&limit=5');
-        final res = await http.get(nomUrl, headers: {'User-Agent': 'BookRabbitApp/1.0'}).timeout(const Duration(seconds: 4));
+        final nomUrl = Uri.parse(
+          'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&addressdetails=1&limit=5',
+        );
+        final res = await http
+            .get(nomUrl, headers: {'User-Agent': 'BookRabbitApp/1.0'})
+            .timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
           final results = json.decode(res.body) as List<dynamic>;
           for (final r in results) {
@@ -451,8 +530,13 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             final lng = double.tryParse(item['lon'].toString()) ?? 0.0;
             final name = (item['display_name'] as String?) ?? query;
             final addr = item['address'] as Map<String, dynamic>? ?? {};
-            final road = (addr['road'] as String?) ?? (addr['suburb'] as String?) ?? '';
-            final city = (addr['city'] as String?) ?? (addr['town'] as String?) ?? (addr['village'] as String?) ?? '';
+            final road =
+                (addr['road'] as String?) ?? (addr['suburb'] as String?) ?? '';
+            final city =
+                (addr['city'] as String?) ??
+                (addr['town'] as String?) ??
+                (addr['village'] as String?) ??
+                '';
             final postcode = (addr['postcode'] as String?) ?? '';
 
             parsedResults.add({
@@ -488,7 +572,6 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
     final lng = item['lng'] as double;
     final title = item['title'] as String;
     final subtitle = item['subtitle'] as String;
-    final street = item['street'] as String;
     final city = item['city'] as String;
     final postcode = item['postcode'] as String;
 
@@ -584,7 +667,10 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
       return;
     }
     if (phone.length != 10) {
-      _showSnackBar('Please enter a valid 10-digit phone number.', isError: true);
+      _showSnackBar(
+        'Please enter a valid 10-digit phone number.',
+        isError: true,
+      );
       return;
     }
     if (email.isNotEmpty && !email.contains('@')) {
@@ -624,7 +710,8 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
       }
 
       // 2. Create ground with OpenStreetMap lat/lng coordinates
-      final mapsUrl = 'https://www.openstreetmap.org/?mlat=$_mapLat&mlon=$_mapLng#map=16/$_mapLat/$_mapLng';
+      final mapsUrl =
+          'https://www.openstreetmap.org/?mlat=$_mapLat&mlon=$_mapLng#map=16/$_mapLat/$_mapLng';
       final order = await VendorAuthService.createGround(
         name: groundName,
         groundType: _selectedSport,
@@ -657,7 +744,10 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      _showSnackBar('An error occurred during ground registration. Please try again.', isError: true);
+      _showSnackBar(
+        'An error occurred during ground registration. Please try again.',
+        isError: true,
+      );
     }
   }
 
@@ -679,7 +769,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                   color: Color(0xFFE8F5E9),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 48),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF4CAF50),
+                  size: 48,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -706,16 +800,24 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                     Navigator.pop(ctx);
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => const VendorDashboardScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const VendorDashboardScreen(),
+                      ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF7A2F),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text(
                     'Go to Vendor Dashboard',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ),
@@ -729,8 +831,16 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: isError ? const Color(0xFFD32F2F) : const Color(0xFF388E3C),
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: isError
+            ? const Color(0xFFD32F2F)
+            : const Color(0xFF388E3C),
         duration: const Duration(seconds: 4),
       ),
     );
@@ -746,14 +856,17 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= 900;
-            final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 900;
+            final isTablet =
+                constraints.maxWidth >= 600 && constraints.maxWidth < 900;
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: Align(
                 alignment: Alignment.topCenter,
                 child: Container(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 960 : double.infinity),
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 960 : double.infinity,
+                  ),
                   padding: EdgeInsets.symmetric(
                     horizontal: isDesktop ? 32 : (isTablet ? 24 : 16),
                     vertical: 16,
@@ -798,13 +911,15 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
   // ── Header & Banner Widget ────────────────────────────────────────────────
 
   Widget _buildHeaderAndBanner() {
-    final progress = _completionPercentage;
-
     return Container(
       decoration: BoxDecoration(
-        color: context.isDark ? const Color(0xFF231B17) : const Color(0xFFFFF7F2),
+        color: context.isDark
+            ? const Color(0xFF231B17)
+            : const Color(0xFFFFF7F2),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFF7A2F).withValues(alpha: 0.15)),
+        border: Border.all(
+          color: const Color(0xFFFF7A2F).withValues(alpha: 0.15),
+        ),
       ),
       child: Stack(
         children: [
@@ -840,7 +955,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: context.borderColor),
                         ),
-                        child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: context.textColor),
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 16,
+                          color: context.textColor,
+                        ),
                       ),
                     ),
                   ],
@@ -864,11 +983,16 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
 
                 // Lifetime Free Offer Pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: context.cardBg.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFFF7A2F).withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: const Color(0xFFFF7A2F).withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -879,21 +1003,35 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                           color: const Color(0xFFFFF0E6),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFF7A2F), size: 18),
+                        child: const Icon(
+                          Icons.card_giftcard_rounded,
+                          color: Color(0xFFFF7A2F),
+                          size: 18,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: RichText(
                           text: TextSpan(
-                            style: TextStyle(fontSize: 12.5, color: context.textColor),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: context.textColor,
+                            ),
                             children: [
                               const TextSpan(
                                 text: 'Lifetime Free Offer: ',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF7A2F)),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFF7A2F),
+                                ),
                               ),
                               TextSpan(
-                                text: 'No payment required. Your ground goes live immediately.',
-                                style: TextStyle(color: context.subTextColor, fontWeight: FontWeight.w500),
+                                text:
+                                    'No payment required. Your ground goes live immediately.',
+                                style: TextStyle(
+                                  color: context.subTextColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),
@@ -903,36 +1041,6 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
-                // Form completion progress bar
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Form completion',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.subTextColor),
-                        ),
-                        Text(
-                          '${(progress * 100).toInt()}%',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFFF7A2F)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 6,
-                        backgroundColor: context.isDark ? Colors.white12 : const Color(0xFFE5E5EA),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF7A2F)),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -953,12 +1061,14 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _buildTextField(
-                  label: 'Owner Name *',
-                  hint: 'Your full name',
-                  controller: _ownerNameController,
-                  onChanged: (_) => setState(() {}),
-                )),
+                Expanded(
+                  child: _buildTextField(
+                    label: 'Owner Name *',
+                    hint: 'Your full name',
+                    controller: _ownerNameController,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
                 const SizedBox(width: 16),
                 Expanded(child: _buildPhoneFieldWithOtp()),
               ],
@@ -1004,7 +1114,9 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             color: context.subCardBg,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _isPhoneVerified ? const Color(0xFF4CAF50) : context.borderColor,
+              color: _isPhoneVerified
+                  ? const Color(0xFF4CAF50)
+                  : context.borderColor,
             ),
           ),
           child: Row(
@@ -1018,12 +1130,22 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                   onChanged: (_) => setState(() {
                     _isPhoneVerified = false;
                   }),
-                  style: TextStyle(color: context.textColor, fontWeight: FontWeight.w500, fontSize: 14),
+                  style: TextStyle(
+                    color: context.textColor,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
                     counterText: '',
                     hintText: '98765 43210',
-                    hintStyle: TextStyle(color: context.subTextColor.withValues(alpha: 0.6), fontSize: 14),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    hintStyle: TextStyle(
+                      color: context.subTextColor.withValues(alpha: 0.6),
+                      fontSize: 14,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                     border: InputBorder.none,
                   ),
                 ),
@@ -1033,9 +1155,20 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                   padding: EdgeInsets.only(right: 12),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 18),
+                      Icon(
+                        Icons.check_circle,
+                        color: Color(0xFF4CAF50),
+                        size: 18,
+                      ),
                       SizedBox(width: 4),
-                      Text('Verified', style: TextStyle(color: Color(0xFF4CAF50), fontSize: 12, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Verified',
+                        style: TextStyle(
+                          color: Color(0xFF4CAF50),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -1045,11 +1178,23 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                   child: TextButton(
                     onPressed: _isSendingOtp ? null : _sendOtp,
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: _isSendingOtp
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7A2F)))
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFFFF7A2F),
+                            ),
+                          )
                         : const Text(
                             'Send OTP',
                             style: TextStyle(
@@ -1067,7 +1212,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
           const SizedBox(height: 4),
           Text(
             'DEV OTP Sent: $_sentDevOtp',
-            style: const TextStyle(fontSize: 11, color: Color(0xFFFF7A2F), fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFFFF7A2F),
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ],
@@ -1151,8 +1300,12 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                     Text(
                       sport['name']!,
                       style: TextStyle(
-                        color: isSelected ? const Color(0xFFFF7A2F) : context.textColor,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected
+                            ? const Color(0xFFFF7A2F)
+                            : context.textColor,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         fontSize: 13,
                       ),
                     ),
@@ -1164,7 +1317,9 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color: isSelected ? const Color(0xFFFF7A2F) : context.borderColor,
+                    color: isSelected
+                        ? const Color(0xFFFF7A2F)
+                        : context.borderColor,
                     width: isSelected ? 1.5 : 1,
                   ),
                 ),
@@ -1242,7 +1397,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
         children: [
           Text(
             'Help players find your ground easily. Search for your address, click "My Location" to auto-detect via GPS, or tap on the map to drop a pin. Your address fields will be auto-filled.',
-            style: TextStyle(fontSize: 12.5, color: context.subTextColor, height: 1.4),
+            style: TextStyle(
+              fontSize: 12.5,
+              color: context.subTextColor,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 14),
 
@@ -1261,25 +1420,43 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                     children: [
                       const Padding(
                         padding: EdgeInsets.only(left: 12, right: 6),
-                        child: Icon(Icons.search_rounded, size: 18, color: Colors.grey),
+                        child: Icon(
+                          Icons.search_rounded,
+                          size: 18,
+                          color: Colors.grey,
+                        ),
                       ),
                       Expanded(
                         child: TextField(
                           controller: _mapSearchController,
                           onChanged: _onSearchQueryChanged,
                           onSubmitted: (q) => _executeLocationSearch(q),
-                          style: TextStyle(color: context.textColor, fontSize: 13),
+                          style: TextStyle(
+                            color: context.textColor,
+                            fontSize: 13,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Search address or landmark...',
-                            hintStyle: TextStyle(color: context.subTextColor.withValues(alpha: 0.6), fontSize: 13),
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            hintStyle: TextStyle(
+                              color: context.subTextColor.withValues(
+                                alpha: 0.6,
+                              ),
+                              fontSize: 13,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
                             border: InputBorder.none,
                           ),
                         ),
                       ),
                       if (_mapSearchController.text.isNotEmpty)
                         IconButton(
-                          icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                          icon: const Icon(
+                            Icons.clear,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
                           onPressed: () {
                             _mapSearchController.clear();
                             setState(() {
@@ -1289,15 +1466,23 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                           },
                         ),
                       InkWell(
-                        onTap: () => _executeLocationSearch(_mapSearchController.text),
+                        onTap: () =>
+                            _executeLocationSearch(_mapSearchController.text),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           margin: const EdgeInsets.only(right: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFF7A2F),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.arrow_forward, color: Colors.white, size: 16),
+                          child: const Icon(
+                            Icons.arrow_forward,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                         ),
                       ),
                     ],
@@ -1319,12 +1504,27 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                   child: Row(
                     children: [
                       _isLocating
-                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7A2F)))
-                          : const Icon(Icons.my_location_rounded, color: Color(0xFFFF7A2F), size: 16),
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFFF7A2F),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.my_location_rounded,
+                              color: Color(0xFFFF7A2F),
+                              size: 16,
+                            ),
                       const SizedBox(width: 6),
                       const Text(
                         'My Location',
-                        style: TextStyle(color: Color(0xFFFF7A2F), fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                          color: Color(0xFFFF7A2F),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -1342,9 +1542,23 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7A2F))),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFFF7A2F),
+                    ),
+                  ),
                   SizedBox(width: 8),
-                  Text('Searching OpenStreetMap...', style: TextStyle(fontSize: 12, color: Color(0xFFFF7A2F), fontWeight: FontWeight.w600)),
+                  Text(
+                    'Searching OpenStreetMap...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFFF7A2F),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1355,30 +1569,48 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
               decoration: BoxDecoration(
                 color: context.cardBg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFFF7A2F).withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: const Color(0xFFFF7A2F).withValues(alpha: 0.3),
+                ),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: ListView.separated(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 itemCount: _searchResults.length,
-                separatorBuilder: (context, index) => Divider(height: 1, color: context.borderColor),
+                separatorBuilder: (context, index) =>
+                    Divider(height: 1, color: context.borderColor),
                 itemBuilder: (context, index) {
                   final item = _searchResults[index];
                   return ListTile(
                     dense: true,
-                    leading: const Icon(Icons.location_on, color: Color(0xFFFF7A2F), size: 20),
+                    leading: const Icon(
+                      Icons.location_on,
+                      color: Color(0xFFFF7A2F),
+                      size: 20,
+                    ),
                     title: Text(
                       item['title'] as String,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.textColor),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: context.textColor,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
                       item['subtitle'] as String,
-                      style: TextStyle(fontSize: 11, color: context.subTextColor),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.subTextColor,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1416,16 +1648,26 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF7F2),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFF7A2F).withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: const Color(0xFFFF7A2F).withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.place_rounded, color: Color(0xFFFF7A2F), size: 16),
+                  const Icon(
+                    Icons.place_rounded,
+                    color: Color(0xFFFF7A2F),
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _pinnedAddress,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFFFF7A2F), fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFFF7A2F),
+                        fontWeight: FontWeight.bold,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1435,8 +1677,6 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             ),
             const SizedBox(height: 8),
           ],
-
-          
         ],
       ),
     );
@@ -1455,7 +1695,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
         children: [
           Text(
             'Operating Days *',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.textColor),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: context.textColor,
+            ),
           ),
           const SizedBox(height: 8),
 
@@ -1484,7 +1728,9 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFFF7A2F) : context.subCardBg,
+                        color: isSelected
+                            ? const Color(0xFFFF7A2F)
+                            : context.subCardBg,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -1510,13 +1756,22 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Opens At (24h)', style: TextStyle(fontSize: 12, color: context.subTextColor)),
+                    Text(
+                      'Opens At (24h)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.subTextColor,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     InkWell(
                       onTap: () => _selectTime(true),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: context.subCardBg,
                           borderRadius: BorderRadius.circular(12),
@@ -1525,8 +1780,18 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_to24h(_openTime), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.textColor)),
-                            Icon(Icons.keyboard_arrow_down_rounded, color: context.subTextColor),
+                            Text(
+                              _to24h(_openTime),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: context.textColor,
+                              ),
+                            ),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: context.subTextColor,
+                            ),
                           ],
                         ),
                       ),
@@ -1539,13 +1804,22 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Closes At (24h)', style: TextStyle(fontSize: 12, color: context.subTextColor)),
+                    Text(
+                      'Closes At (24h)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.subTextColor,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     InkWell(
                       onTap: () => _selectTime(false),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: context.subCardBg,
                           borderRadius: BorderRadius.circular(12),
@@ -1554,8 +1828,18 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_to24h(_closeTime), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.textColor)),
-                            Icon(Icons.keyboard_arrow_down_rounded, color: context.subTextColor),
+                            Text(
+                              _to24h(_closeTime),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: context.textColor,
+                              ),
+                            ),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: context.subTextColor,
+                            ),
                           ],
                         ),
                       ),
@@ -1574,15 +1858,25 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFFFFF7F2),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFF7A2F).withValues(alpha: 0.2)),
+              border: Border.all(
+                color: const Color(0xFFFF7A2F).withValues(alpha: 0.2),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.access_time_rounded, color: Color(0xFFFF7A2F), size: 16),
+                const Icon(
+                  Icons.access_time_rounded,
+                  color: Color(0xFFFF7A2F),
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   '${_formatTimeOfDay(_openTime)} → ${_formatTimeOfDay(_closeTime)}  •  ${totalHours}h open per day',
-                  style: const TextStyle(color: Color(0xFFFF7A2F), fontWeight: FontWeight.bold, fontSize: 12.5),
+                  style: const TextStyle(
+                    color: Color(0xFFFF7A2F),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                  ),
                 ),
               ],
             ),
@@ -1622,7 +1916,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                         color: Color(0xFFFFF0E6),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.camera_alt_rounded, color: Color(0xFFFF7A2F), size: 24),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Color(0xFFFF7A2F),
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -1636,7 +1934,10 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'PNG, JPG up to 10 MB - Max 6 images',
-                      style: TextStyle(fontSize: 12, color: context.subTextColor),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.subTextColor,
+                      ),
                     ),
                   ],
                 ),
@@ -1669,9 +1970,16 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                             future: _pickedImages[index].readAsBytes(),
                             builder: (context, snapshot) {
                               if (snapshot.hasData) {
-                                return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                                return Image.memory(
+                                  snapshot.data!,
+                                  fit: BoxFit.cover,
+                                );
                               }
-                              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              );
                             },
                           ),
                         ),
@@ -1687,7 +1995,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                               color: Color(0xFFD32F2F),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close, color: Colors.white, size: 12),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -1720,7 +2032,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
               color: Color(0xFFFFF0E6),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFF7A2F), size: 24),
+            child: const Icon(
+              Icons.card_giftcard_rounded,
+              color: Color(0xFFFF7A2F),
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1729,7 +2045,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
               children: [
                 const Text(
                   '🎉 Join free for lifetime',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFFFF7A2F)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13.5,
+                    color: Color(0xFFFF7A2F),
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -1749,20 +2069,37 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
         onPressed: _isSubmitting ? null : _submitRegistration,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFF7A2F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           elevation: 2,
         ),
         child: _isSubmitting
-            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
             : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Register Free - Lifetime Access',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                   SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ],
               ),
       ),
@@ -1837,7 +2174,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                 alignment: Alignment.center,
                 child: Text(
                   stepNumber,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1871,7 +2212,11 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.textColor),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: context.textColor,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -1879,13 +2224,23 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
           keyboardType: keyboardType,
           maxLines: maxLines,
           onChanged: onChanged,
-          style: TextStyle(color: context.textColor, fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            color: context.textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
           decoration: InputDecoration(
             filled: true,
             fillColor: context.subCardBg,
             hintText: hint,
-            hintStyle: TextStyle(color: context.subTextColor.withValues(alpha: 0.6), fontSize: 14),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            hintStyle: TextStyle(
+              color: context.subTextColor.withValues(alpha: 0.6),
+              fontSize: 14,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: context.borderColor),
@@ -1896,7 +2251,10 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFF7A2F), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF7A2F),
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -1972,7 +2330,10 @@ class _LeafletOsmMapState extends State<LeafletOsmMap> {
                   flags: InteractiveFlag.all,
                 ),
                 onTap: (tapPosition, point) {
-                  widget.onLocationChanged?.call(point.latitude, point.longitude);
+                  widget.onLocationChanged?.call(
+                    point.latitude,
+                    point.longitude,
+                  );
                 },
                 onPositionChanged: (position, hasGesture) {
                   if (hasGesture) {
@@ -2003,13 +2364,19 @@ class _LeafletOsmMapState extends State<LeafletOsmMap> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFF7A2F).withValues(alpha: 0.5),
+                                  color: const Color(
+                                    0xFFFF7A2F,
+                                  ).withValues(alpha: 0.5),
                                   blurRadius: 10,
                                   spreadRadius: 2,
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 20),
+                            child: const Icon(
+                              Icons.location_on_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                           Container(
                             width: 8,
@@ -2035,8 +2402,14 @@ class _LeafletOsmMapState extends State<LeafletOsmMap> {
                 children: [
                   InkWell(
                     onTap: () {
-                      final newZoom = (_mapController.camera.zoom + 1).clamp(3.0, 19.0);
-                      _mapController.move(_mapController.camera.center, newZoom);
+                      final newZoom = (_mapController.camera.zoom + 1).clamp(
+                        3.0,
+                        19.0,
+                      );
+                      _mapController.move(
+                        _mapController.camera.center,
+                        newZoom,
+                      );
                       widget.onZoomChanged?.call(newZoom);
                     },
                     child: Container(
@@ -2044,16 +2417,28 @@ class _LeafletOsmMapState extends State<LeafletOsmMap> {
                       height: 34,
                       decoration: BoxDecoration(
                         color: context.cardBg,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                        ),
                         border: Border.all(color: context.borderColor),
                       ),
-                      child: Icon(Icons.add, size: 18, color: context.textColor),
+                      child: Icon(
+                        Icons.add,
+                        size: 18,
+                        color: context.textColor,
+                      ),
                     ),
                   ),
                   InkWell(
                     onTap: () {
-                      final newZoom = (_mapController.camera.zoom - 1).clamp(3.0, 19.0);
-                      _mapController.move(_mapController.camera.center, newZoom);
+                      final newZoom = (_mapController.camera.zoom - 1).clamp(
+                        3.0,
+                        19.0,
+                      );
+                      _mapController.move(
+                        _mapController.camera.center,
+                        newZoom,
+                      );
                       widget.onZoomChanged?.call(newZoom);
                     },
                     child: Container(
@@ -2061,10 +2446,16 @@ class _LeafletOsmMapState extends State<LeafletOsmMap> {
                       height: 34,
                       decoration: BoxDecoration(
                         color: context.cardBg,
-                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(8),
+                        ),
                         border: Border.all(color: context.borderColor),
                       ),
-                      child: Icon(Icons.remove, size: 18, color: context.textColor),
+                      child: Icon(
+                        Icons.remove,
+                        size: 18,
+                        color: context.textColor,
+                      ),
                     ),
                   ),
                 ],
@@ -2080,16 +2471,26 @@ class _LeafletOsmMapState extends State<LeafletOsmMap> {
                 decoration: BoxDecoration(
                   color: context.cardBg.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: context.borderColor.withValues(alpha: 0.6)),
+                  border: Border.all(
+                    color: context.borderColor.withValues(alpha: 0.6),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.map_rounded, size: 12, color: Color(0xFFFF7A2F)),
+                    const Icon(
+                      Icons.map_rounded,
+                      size: 12,
+                      color: Color(0xFFFF7A2F),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Leaflet | © OpenStreetMap contributors',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: context.textColor),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                        color: context.textColor,
+                      ),
                     ),
                   ],
                 ),

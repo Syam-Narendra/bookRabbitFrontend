@@ -24,8 +24,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initApp() async {
+    //  REMOVE before production — deliberate delay to test splash screen on web
+    // await Future.delayed(const Duration(seconds: 3));
+
     // Precache the logo image to ensure 0-frame delay/flicker when native splash is removed
-    await precacheImage(const AssetImage('assets/images/sports_bunnies.png'), context).catchError((_) {});
+    await precacheImage(
+      const AssetImage('assets/images/sports_bunnies.png'),
+      context,
+    ).catchError((_) {});
 
     // Remove native splash seamlessly once Flutter has rendered its first frame and image is ready
     // Use Object catch to handle both Exception and PlatformException (web throws PlatformException)
@@ -47,10 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
         pageBuilder: (context, animation, secondaryAnimation) =>
             isLoggedIn ? const HomeScreen() : const LoginScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 300),
       ),
@@ -111,25 +114,31 @@ class _SplashScreenState extends State<SplashScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Book Rabbit Mascots Branding
-                  Image.asset(
-                    'assets/images/sports_bunnies.png',
-                    width: 170,
-                    height: 170,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 110,
-                      height: 110,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF4B3A).withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.sports_soccer,
-                        size: 56,
-                        color: Color(0xFFFF4B3A),
-                      ),
-                    ),
-                  )
+                  ClipRRect(
+                        borderRadius: BorderRadius.circular(32),
+                        child: Image.asset(
+                          'assets/images/sports_bunnies.png',
+                          width: 170,
+                          height: 170,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                width: 110,
+                                height: 110,
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFFFF4B3A,
+                                  ).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.sports_soccer,
+                                  size: 56,
+                                  color: Color(0xFFFF4B3A),
+                                ),
+                              ),
+                        ),
+                      )
                       .animate()
                       .fade(duration: 550.ms)
                       .scale(curve: Curves.easeOutBack, duration: 550.ms),
@@ -138,14 +147,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
                   // App Title
                   Text(
-                    'Book Rabbit',
-                    style: AppTypography.heading.copyWith(
-                      color: Colors.white,
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  )
+                        'Book Rabbit',
+                        style: AppTypography.heading.copyWith(
+                          color: Colors.white,
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      )
                       .animate()
                       .fade(delay: 150.ms, duration: 450.ms)
                       .slideY(begin: 0.15, end: 0, duration: 450.ms),
@@ -154,13 +163,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
                   // App Tagline
                   Text(
-                    'Instantly book your favourite sports grounds',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.body.copyWith(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  )
+                        'Instantly book your favourite sports grounds',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.body.copyWith(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      )
                       .animate()
                       .fade(delay: 280.ms, duration: 450.ms)
                       .slideY(begin: 0.15, end: 0, duration: 450.ms),
@@ -173,11 +182,11 @@ class _SplashScreenState extends State<SplashScreen> {
                     height: 26,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B3A)),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFFFF4B3A),
+                      ),
                     ),
-                  )
-                      .animate()
-                      .fade(delay: 400.ms, duration: 350.ms),
+                  ).animate().fade(delay: 400.ms, duration: 350.ms),
                 ],
               ),
             ),
