@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'router/app_router.dart';
 import 'services/api_client.dart';
 import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
+import 'utils/configure_url_strategy.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Enable clean path-based URLs (no # hash) for Flutter Web.
-  // This must be called before runApp() and before any routing occurs.
-  usePathUrlStrategy();
+  // Enable clean path-based URLs (no # hash) for Flutter Web conditionally.
+  configureUrlStrategy();
 
   // Run theme + token load in parallel before showing any UI.
   await Future.wait([
@@ -36,8 +35,6 @@ class MyApp extends StatelessWidget {
           themeMode: themeMode,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          // go_router provides the full RouterConfig — no need for separate
-          // routerDelegate / routeInformationParser / routeInformationProvider.
           routerConfig: appRouter,
         );
       },
